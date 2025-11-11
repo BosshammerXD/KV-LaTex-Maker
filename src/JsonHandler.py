@@ -51,6 +51,43 @@ def write_to_json(path: str, data: Any):
 #
 #
 #
+#region get data from Json
+def __fill_data(contents: __JsonData, data: DataclassProtocol):
+    for key, value in contents.items():
+        if not hasattr(data, key):
+            raise ValueError(f"the provided json has the wrong contents. {key} is not a member of the dataclass")
+        val = getattr(data, key)
+        if isinstance(val, DataclassProtocol) and isinstance(value, dict):
+            __fill_data(value, val) #type:ignore
+        elif isinstance(value, type(val)):
+            setattr(data, key, value)
+        else:
+            raise ValueError(f"The values of the provided json have the wrong type. {key} has type {type(val)} in dataclass {data.__class__} but type {type(value)} in json")
+
+
+def read_from_json(path: str, data: Any):
+    assert(isinstance(data, DataclassProtocol))
+    contents: __JsonData
+    try:
+        with open(os.path.join(CONFIGS_PATH, path)) as f:
+            contents = json.loads(f.read())
+    except FileNotFoundError:
+        return
+    __fill_data(contents, data)
+#endregion
+
+@dataclasses.dataclass
+class B:
+    y: int = 1
+
+@dataclasses.dataclass
+class A:
+    y: B
+    x: int = 1
 
 if __name__ == "__main__":
-    pass
+    write_to_json("config.json", A(x=10, y=B(10)))
+    myA = A(y=B(1))
+    print(myA.x, myA.y.y, sep=", ")
+    read_from_json("config.json", myA)
+    print(myA.x, myA.y.y, sep=", ")
