@@ -62,7 +62,7 @@ def __fill_data(contents: __JsonData, data: type):
             raise ValueError(f"The values of the provided json have the wrong type. {key} has type {type(val)} in dataclass {data.__name__} but type {type(value)} in json")
 
 
-def read_from_json(path: str, data: Any):
+def read_from_json(path: str, data: type):
     assert(isinstance(data, type))
     contents: __JsonData
     with open(os.path.join(CONFIGS_PATH, path)) as f:
