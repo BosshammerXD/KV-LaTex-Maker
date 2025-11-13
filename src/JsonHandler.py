@@ -68,26 +68,10 @@ def __fill_data(contents: __JsonData, data: DataclassProtocol):
 def read_from_json(path: str, data: Any):
     assert(isinstance(data, DataclassProtocol))
     contents: __JsonData
-    try:
-        with open(os.path.join(CONFIGS_PATH, path)) as f:
-            contents = json.loads(f.read())
-    except FileNotFoundError:
-        return
+    with open(os.path.join(CONFIGS_PATH, path)) as f:
+        contents = json.loads(f.read())
     __fill_data(contents, data)
 #endregion
 
-@dataclasses.dataclass
-class B:
-    y: int = 1
-
-@dataclasses.dataclass
-class A:
-    y: B
-    x: int = 1
-
 if __name__ == "__main__":
-    write_to_json("config.json", A(x=10, y=B(10)))
-    myA = A(y=B(1))
-    print(myA.x, myA.y.y, sep=", ")
-    read_from_json("config.json", myA)
-    print(myA.x, myA.y.y, sep=", ")
+    pass
