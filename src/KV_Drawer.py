@@ -9,7 +9,7 @@ class KV_Drawer:
     """
     Class to draw Karnaugh maps using Tkinter.
     """
-    col_map: dict[str, str] = DYNAMIC.COLORS
+    col_map: dict[str, str] = DYNAMIC.Colors
 
     def __init__(self, my_canvas: Canvas) -> None:
         self.my_canvas = my_canvas

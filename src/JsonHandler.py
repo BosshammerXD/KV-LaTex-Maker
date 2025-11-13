@@ -1,20 +1,11 @@
 import dataclasses
 import json
 import os
-from typing import Any, Union
+from typing import Union
+from Globals import STATIC
 
-#
-#
-#
-#region move to globals later
-base_dir = os.path.dirname(os.path.abspath(__file__))
-#endregion
-#
-#
-#
-CONFIGS_PATH: str = os.path.join(base_dir, "configs")
-if not os.path.exists(CONFIGS_PATH):
-    os.makedirs(CONFIGS_PATH, exist_ok=True)
+if not os.path.exists(STATIC.PATHS.CONFIG_FOLDER):
+    os.makedirs(STATIC.PATHS.CONFIG_FOLDER, exist_ok=True)
 
 __PRIMITIVE_TYPES = Union[int, float, str, bool]
 __JsonData = dict[str, Union[__PRIMITIVE_TYPES, list['__JsonData'], tuple['__JsonData'], dict[str, '__JsonData'], '__JsonData']]
@@ -35,12 +26,12 @@ def __generate_json_data(data: type) -> __JsonData:
             raise ValueError(f"Encountered type that cannot be dumped into json. type:{field.type}")
     return retval
 
-def write_to_json(path: str, data: Any):
+def write_to_json(path: str, data: type):
     assert isinstance(data, type), "Provided data was not a dataclass"
 
     json_data: __JsonData = __generate_json_data(data)
 
-    path_to_file = os.path.join(CONFIGS_PATH, path)
+    path_to_file = os.path.join(STATIC.PATHS.CONFIG_FOLDER, path)
     
     with open(path_to_file, "w+") as f:
         f.write(json.dumps(json_data, indent=2))
@@ -65,7 +56,7 @@ def __fill_data(contents: __JsonData, data: type):
 def read_from_json(path: str, data: type):
     assert(isinstance(data, type))
     contents: __JsonData
-    with open(os.path.join(CONFIGS_PATH, path)) as f:
+    with open(os.path.join(STATIC.PATHS.CONFIG_FOLDER, path)) as f:
         contents = json.loads(f.read())
     __fill_data(contents, data)
 #endregion
