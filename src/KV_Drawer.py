@@ -3,23 +3,13 @@ from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
 from KV_Utils import KV_Utils
+from Globals import DYNAMIC, STATIC
 
 class KV_Drawer:
     """
     Class to draw Karnaugh maps using Tkinter.
     """
-    COL_MAP: dict[str, str] = {
-        "red": "#FF0000",
-        "green": "#00FF00",
-        "blue": "#0000FF",
-        "yellow": "#FFFF00",
-        "purple": "#800080",
-        "cyan": "#00FFFF",
-        "orange": "#FFA500",
-        "pink": "#FFC0CB",
-        "brown": "#A52A2A",
-        "gray": "#808080",
-    }
+    col_map: dict[str, str] = DYNAMIC.COLORS
 
     def __init__(self, my_canvas: Canvas) -> None:
         self.my_canvas = my_canvas
@@ -30,16 +20,13 @@ class KV_Drawer:
 
         self.__vars: list[str] = []
         self.dimensions: tuple[int, int] = (0, 0)
-        self.vals: StringVar = StringVar(value="11000011****10**")
+        self.vals: StringVar = StringVar(value=STATIC.DEF_KV_VALUES.VALUES)
         self.vals.trace_add("write", lambda x,y,z: self.draw())  # Update on change
-        self.title: StringVar = StringVar(value="")
+        self.title: StringVar = StringVar(value=STATIC.DEF_KV_VALUES.TITLE)
 
         self.__width: int = my_canvas.winfo_width()
         self.__height: int = my_canvas.winfo_height()
         self.__cell_size: float = 0
-
-        self.__large_font: tuple[str, int] = ("Arial", 12)
-        self.__small_font: tuple[str, int] = ("Arial", 8)
 
         self.__grid_width: float = 0
         self.__grid_height: float = 0
@@ -188,7 +175,7 @@ class KV_Drawer:
             if isinstance(col, StringVar):
                 col = col.get()
                 line_width = 4
-            col = self.COL_MAP[col]
+            col = self.col_map[col]
 
             for block in KV_Utils.blocks:
                 (x1, y1), (x2, y2), openings = self.__get_rect_bounds(block, indices)
@@ -278,9 +265,9 @@ class KV_Drawer:
 
         self.__cell_size = min(cell_width, cell_height)
 
-        self.__large_font = ("Arial", int(self.__cell_size // 2))
-        self.__normal_font = ("Arial", int(self.__cell_size // 4))
-        self.__small_font = ("Arial", int(self.__cell_size // 6))
+        self.__large_font = (STATIC.FONTS.KV.TYPE, int(self.__cell_size // 2))
+        self.__normal_font = (STATIC.FONTS.KV.TYPE, int(self.__cell_size // 4))
+        self.__small_font = (STATIC.FONTS.KV.TYPE, int(self.__cell_size // 6))
 
         self.__grid_width = self.__cell_size * self.dimensions[0]
         self.__grid_height = self.__cell_size * self.dimensions[1]
@@ -340,9 +327,9 @@ class KV_Drawer:
         self.__current_indices.clear()
 
         self.__col_index += 1
-        if self.__col_index >= len(self.COL_MAP):
+        if self.__col_index >= len(self.col_map):
             self.__col_index = 0
-        self.current_col.set(list(self.COL_MAP.keys())[self.__col_index])
+        self.current_col.set(list(self.col_map.keys())[self.__col_index])
         
         self.__markings.insert(self.__marking_index + 1, (self.current_col, self.__current_indices))
         self.__marking_index += 1
