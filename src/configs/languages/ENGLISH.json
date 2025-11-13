@@ -5,6 +5,7 @@
     "PREVIOUS": "Prev.",
     "NEW": "New",
     "NEXT": "Next",
+    "OK": "Ok",
     "VAR_WARNING_MSG": "entering more then 6 variables,\n can cause performance issues.\nProceed?",
     "CPY_BUTTON": "Copy to clipboard",
     "SECTIONS": {
