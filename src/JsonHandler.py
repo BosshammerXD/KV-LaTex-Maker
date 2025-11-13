@@ -1,11 +1,8 @@
 import dataclasses
 import json
 import os
-from typing import Any, Protocol, Union, runtime_checkable
+from typing import Any, Union
 
-@runtime_checkable
-class DataclassProtocol(Protocol):
-    __dataclass_fields__: dict[str, Any]
 #
 #
 #
@@ -25,12 +22,12 @@ __JsonData = dict[str, Union[__PRIMITIVE_TYPES, list['__JsonData'], tuple['__Jso
 #
 #
 #region json creation
-def __generate_json_data(data: DataclassProtocol) -> __JsonData:
+def __generate_json_data(data: type) -> __JsonData:
     retval: __JsonData = {}
     for field in dataclasses.fields(data): #type:ignore 
         attr_name = field.name
         attr = getattr(data, attr_name)
-        if isinstance(attr, DataclassProtocol):
+        if isinstance(attr, type):
             retval[attr_name] = __generate_json_data(attr)
         elif isinstance(attr, Union[__PRIMITIVE_TYPES, list, tuple, dict]):
             retval[attr_name] = attr
@@ -39,7 +36,7 @@ def __generate_json_data(data: DataclassProtocol) -> __JsonData:
     return retval
 
 def write_to_json(path: str, data: Any):
-    assert isinstance(data, DataclassProtocol), "Provided data was not a dataclass"
+    assert isinstance(data, type), "Provided data was not a dataclass"
 
     json_data: __JsonData = __generate_json_data(data)
 
@@ -52,21 +49,21 @@ def write_to_json(path: str, data: Any):
 #
 #
 #region get data from Json
-def __fill_data(contents: __JsonData, data: DataclassProtocol):
+def __fill_data(contents: __JsonData, data: type):
     for key, value in contents.items():
         if not hasattr(data, key):
             raise ValueError(f"the provided json has the wrong contents. {key} is not a member of the dataclass")
         val = getattr(data, key)
-        if isinstance(val, DataclassProtocol) and isinstance(value, dict):
+        if isinstance(val, type) and isinstance(value, dict):
             __fill_data(value, val) #type:ignore
         elif isinstance(value, type(val)):
             setattr(data, key, value)
         else:
-            raise ValueError(f"The values of the provided json have the wrong type. {key} has type {type(val)} in dataclass {data.__class__} but type {type(value)} in json")
+            raise ValueError(f"The values of the provided json have the wrong type. {key} has type {type(val)} in dataclass {data.__name__} but type {type(value)} in json")
 
 
 def read_from_json(path: str, data: Any):
-    assert(isinstance(data, DataclassProtocol))
+    assert(isinstance(data, type))
     contents: __JsonData
     with open(os.path.join(CONFIGS_PATH, path)) as f:
         contents = json.loads(f.read())
