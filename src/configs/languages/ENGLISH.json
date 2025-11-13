@@ -1,0 +1,21 @@
+{
+    "CONFIRM": "Yes",
+    "DENY": "No",
+    "WARNING": "Warning",
+    "PREVIOUS": "Prev.",
+    "NEW": "New",
+    "NEXT": "Next",
+    "VAR_WARNING_MSG": "entering more then 6 variables,\n can cause performance issues.\nProceed?",
+    "CPY_BUTTON": "Copy to clipboard",
+    "SECTIONS": {
+        "TITLE_FRAME_NAME": "Title",
+        "VAR_FRAME_NAME": "Variables",
+        "VALS_FRAME_NAME": "Values",
+        "MARKING_FRAME_NAME": "Marking"
+    },
+    "MENUBAR": {
+        "OPTIONS": "Options",
+        "HOTKEYS": "Hotkeys",
+        "COLORS": "Colors"
+    }
+}
