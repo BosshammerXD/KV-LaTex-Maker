@@ -1,3 +1,4 @@
+from Globals.STATIC import ROOT
 from collections.abc import Callable
 from tkinter import Toplevel, Label, Frame, Button
 
@@ -9,7 +10,7 @@ class Popup:
         self.__buttons: list[tuple[str, Callable[[], None]]] = []
         
     
-    def show(self) -> None:
+    def show(self) -> Toplevel:
         self.win = Toplevel()
         self.win.deiconify()
         self.win.wm_title(self.__title)
@@ -27,6 +28,8 @@ class Popup:
             button = Button(self.__button_frame, text=text, command=self.__destroy_wrapper(command))
             button.grid(column=self.__column_counter, row=0, sticky="ew")
             self.__column_counter += 1
+        
+        return self.win
 
             
     
@@ -39,7 +42,9 @@ class Popup:
             func()
         
         return wrapper
-        
 
-
+def wait_for_pop_up(win: Toplevel, hide: bool = False):
+    if hide: ROOT.withdraw()
+    ROOT.wait_window(win)
+    if hide: ROOT.deiconify()
     
