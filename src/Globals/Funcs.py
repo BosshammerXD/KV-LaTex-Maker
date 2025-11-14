@@ -11,7 +11,8 @@ def load_config():
         except FileNotFoundError:
             LANG_NOT_FOUND_POP_UP: Popup = Popup("Info", f"Was Not able to find the {DYNAMIC.Selected_language} Language Package.\nSwitching to Default Language English")
             LANG_NOT_FOUND_POP_UP.add_button("Ok", lambda: None)
-            LANG_NOT_FOUND_POP_UP.show()
+            win = LANG_NOT_FOUND_POP_UP.show()
+            wait_for_pop_up(win, True)
             
 
     try:
