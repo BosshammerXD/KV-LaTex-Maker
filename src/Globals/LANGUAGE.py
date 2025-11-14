@@ -19,5 +19,5 @@ class SECTIONS:
 
 class MENUBAR:
     OPTIONS: str = "Options"
-    HOTKEYS: str = "Hotkeys"
+    SETTINGS: str = "Settings"
     COLORS: str = "Colors"

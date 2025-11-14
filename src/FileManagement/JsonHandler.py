@@ -2,10 +2,10 @@ import json
 import os
 from typing import Union
 from types import ModuleType
-from Globals.STATIC import PATHS
+from Globals.STATIC.PATHS import CONFIG_FOLDER
 
-if not os.path.exists(PATHS.CONFIG_FOLDER):
-    os.makedirs(PATHS.CONFIG_FOLDER, exist_ok=True)
+if not os.path.exists(CONFIG_FOLDER):
+    os.makedirs(CONFIG_FOLDER, exist_ok=True)
 
 __PRIMITIVE_TYPES = Union[int, float, str, bool]
 __JsonData = dict[str, Union[__PRIMITIVE_TYPES, list['__JsonData'], tuple['__JsonData'], dict[str, '__JsonData'], '__JsonData']]
@@ -29,7 +29,7 @@ def __generate_json_data(data: ModuleType) -> __JsonData:
 def write_to_json(path: str, data: ModuleType):
     json_data: __JsonData = __generate_json_data(data)
 
-    path_to_file = os.path.join(PATHS.CONFIG_FOLDER, path)
+    path_to_file = os.path.join(CONFIG_FOLDER, path)
     
     with open(path_to_file, "w+") as f:
         f.write(json.dumps(json_data, indent=2))
@@ -53,7 +53,7 @@ def __fill_data(contents: __JsonData, data: ModuleType | type):
 
 def read_from_json(path: str, data: ModuleType):
     contents: __JsonData
-    with open(os.path.join(PATHS.CONFIG_FOLDER, path)) as f:
+    with open(os.path.join(CONFIG_FOLDER, path)) as f:
         contents = json.loads(f.read())
     __fill_data(contents, data)
 #endregion

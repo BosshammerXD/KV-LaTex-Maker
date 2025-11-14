@@ -3,14 +3,15 @@ from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
 from KV_Utils import KV_Utils
-from Globals import DYNAMIC
-from Globals.STATIC import FONTS, DEF_KV_VALUES
+from Globals.DYNAMIC import Colors
+from Globals.STATIC import FONTS
+from Globals.STATIC.DEF_KV_VALUES import VALUES, TITLE
 
 class KV_Drawer:
     """
     Class to draw Karnaugh maps using Tkinter.
     """
-    col_map: dict[str, str] = DYNAMIC.Colors
+    col_map: dict[str, str] = Colors
 
     def __init__(self, my_canvas: Canvas) -> None:
         self.my_canvas = my_canvas
@@ -21,9 +22,9 @@ class KV_Drawer:
 
         self.__vars: list[str] = []
         self.dimensions: tuple[int, int] = (0, 0)
-        self.vals: StringVar = StringVar(value=DEF_KV_VALUES.VALUES)
+        self.vals: StringVar = StringVar(value=VALUES)
         self.vals.trace_add("write", lambda x,y,z: self.draw())  # Update on change
-        self.title: StringVar = StringVar(value=DEF_KV_VALUES.TITLE)
+        self.title: StringVar = StringVar(value=TITLE)
 
         self.__width: int = my_canvas.winfo_width()
         self.__height: int = my_canvas.winfo_height()
