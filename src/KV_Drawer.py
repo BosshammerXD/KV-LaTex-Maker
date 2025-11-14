@@ -3,7 +3,8 @@ from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
 from KV_Utils import KV_Utils
-from Globals import DYNAMIC, STATIC
+from Globals import DYNAMIC
+from Globals.STATIC import FONTS, DEF_KV_VALUES
 
 class KV_Drawer:
     """
@@ -20,9 +21,9 @@ class KV_Drawer:
 
         self.__vars: list[str] = []
         self.dimensions: tuple[int, int] = (0, 0)
-        self.vals: StringVar = StringVar(value=STATIC.DEF_KV_VALUES.VALUES)
+        self.vals: StringVar = StringVar(value=DEF_KV_VALUES.VALUES)
         self.vals.trace_add("write", lambda x,y,z: self.draw())  # Update on change
-        self.title: StringVar = StringVar(value=STATIC.DEF_KV_VALUES.TITLE)
+        self.title: StringVar = StringVar(value=DEF_KV_VALUES.TITLE)
 
         self.__width: int = my_canvas.winfo_width()
         self.__height: int = my_canvas.winfo_height()
@@ -265,9 +266,9 @@ class KV_Drawer:
 
         self.__cell_size = min(cell_width, cell_height)
 
-        self.__large_font = (STATIC.FONTS.KV.TYPE, int(self.__cell_size // 2))
-        self.__normal_font = (STATIC.FONTS.KV.TYPE, int(self.__cell_size // 4))
-        self.__small_font = (STATIC.FONTS.KV.TYPE, int(self.__cell_size // 6))
+        self.__large_font = (FONTS.TYPE, int(self.__cell_size // 2))
+        self.__normal_font = (FONTS.TYPE, int(self.__cell_size // 4))
+        self.__small_font = (FONTS.TYPE, int(self.__cell_size // 6))
 
         self.__grid_width = self.__cell_size * self.dimensions[0]
         self.__grid_height = self.__cell_size * self.dimensions[1]

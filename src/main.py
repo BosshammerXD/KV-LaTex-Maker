@@ -2,20 +2,21 @@ import tkinter as tk
 from KV_Drawer import KV_Drawer
 from Section import Section
 from Popup import Popup
-from Globals import LANGUAGE, STATIC
-
-root = tk.Tk()
+from Globals import LANGUAGE, STATIC, Funcs
+from Globals.STATIC import DEF_KV_VALUES
 
 def update_karnaugh_map(kv_drawer: KV_Drawer) -> None:
     # Beispielwerte für die Methode
-    my_vars = STATIC.DEF_KV_VALUES.VALUES.split(",")
+    my_vars = DEF_KV_VALUES.VARS.split(",")
 
     kv_drawer.my_vars = my_vars
     
     kv_drawer.draw()
 
 if __name__ == "__main__":
-    menu = tk.Menu(root)
+    Funcs.load_config()
+
+    menu = tk.Menu(STATIC.ROOT)
     
     options_menu = tk.Menu(menu, tearoff=0)
     menu.add_cascade(label=LANGUAGE.MENUBAR.OPTIONS, menu=options_menu)
@@ -23,25 +24,25 @@ if __name__ == "__main__":
     options_menu.add_command(label=LANGUAGE.MENUBAR.HOTKEYS, command=lambda: None)  # Placeholder for colors action
     #root.config(menu=menu)
 
-    root.rowconfigure(0, weight=1)
-    root.columnconfigure(0, weight=3)  # Left column (canvas) gets more space
-    root.columnconfigure(1, weight=1)  # Right column (controls)
+    STATIC.ROOT.rowconfigure(0, weight=1)
+    STATIC.ROOT.columnconfigure(0, weight=3)  # Left column (canvas) gets more space
+    STATIC.ROOT.columnconfigure(1, weight=1)  # Right column (controls)
 
     # Canvas on the left
-    canvas = tk.Canvas(root, bg=STATIC.BG_COLOR)
+    canvas = tk.Canvas(STATIC.ROOT, bg=STATIC.BG_COLOR)
     canvas.grid(row=0, column=0, sticky="nsew")
 
     my_KV_drawer = KV_Drawer(canvas)  # Placeholder for KV_Drawer instance
 
     # Controls on the right
-    controls = tk.Frame(root)
+    controls = tk.Frame(STATIC.ROOT)
     controls.grid(row=0, column=1, sticky="nsew")
 
     title_Frame = Section(controls, LANGUAGE.SECTIONS.TITLE_FRAME_NAME).frame
     tk.Entry(title_Frame, textvariable=my_KV_drawer.title).pack(fill="x", pady=0)
 
     # Arrange controls vertically inside the frame
-    vars_input = tk.StringVar(value=STATIC.DEF_KV_VALUES.VALUES)
+    vars_input = tk.StringVar(value=DEF_KV_VALUES.VALUES)
     var_frame = Section(controls, LANGUAGE.SECTIONS.VAR_FRAME_NAME).frame
 
     var_warning = Popup(LANGUAGE.WARNING, LANGUAGE.VAR_WARNING_MSG)
@@ -85,10 +86,10 @@ if __name__ == "__main__":
         command=lambda : my_KV_drawer.different_marking(1)).grid(row=0, column=2, sticky="ew", padx=0)
 
     def copy_to_clipboard():
-        root.clipboard_clear()
-        root.clipboard_append(my_KV_drawer.get_kv_string())
-        root.update()  # Keeps the clipboard content after the program ends
+        STATIC.ROOT.clipboard_clear()
+        STATIC.ROOT.clipboard_append(my_KV_drawer.get_kv_string())
+        STATIC.ROOT.update()  # Keeps the clipboard content after the program ends
     tk.Button(controls, text=LANGUAGE.CPY_BUTTON, command=copy_to_clipboard).pack(fill="x", pady=5)
 
     update_karnaugh_map(my_KV_drawer)  # Call the function to update the map
-    root.mainloop()
+    STATIC.ROOT.mainloop()

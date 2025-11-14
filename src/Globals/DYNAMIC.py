@@ -1,0 +1,14 @@
+Hotkeys: dict[str, str] = {}
+Colors: dict[str, str] = {
+    "red": "#FF0000",
+    "green": "#00FF00",
+    "blue": "#0000FF",
+    "yellow": "#FFFF00",
+    "purple": "#800080",
+    "cyan": "#00FFFF",
+    "orange": "#FFA500",
+    "pink": "#FFC0CB",
+    "brown": "#A52A2A",
+    "gray": "#808080",
+}
+Selected_language = "ENGLISH"

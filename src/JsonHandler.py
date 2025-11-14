@@ -1,11 +1,11 @@
-import dataclasses
 import json
 import os
 from typing import Union
-from Globals import STATIC
+from types import ModuleType
+from Globals.STATIC import PATHS
 
-if not os.path.exists(STATIC.PATHS.CONFIG_FOLDER):
-    os.makedirs(STATIC.PATHS.CONFIG_FOLDER, exist_ok=True)
+if not os.path.exists(PATHS.CONFIG_FOLDER):
+    os.makedirs(PATHS.CONFIG_FOLDER, exist_ok=True)
 
 __PRIMITIVE_TYPES = Union[int, float, str, bool]
 __JsonData = dict[str, Union[__PRIMITIVE_TYPES, list['__JsonData'], tuple['__JsonData'], dict[str, '__JsonData'], '__JsonData']]
@@ -13,25 +13,23 @@ __JsonData = dict[str, Union[__PRIMITIVE_TYPES, list['__JsonData'], tuple['__Jso
 #
 #
 #region json creation
-def __generate_json_data(data: type) -> __JsonData:
+def __generate_json_data(data: ModuleType) -> __JsonData:
     retval: __JsonData = {}
-    for field in dataclasses.fields(data): #type:ignore 
-        attr_name = field.name
-        attr = getattr(data, attr_name)
-        if isinstance(attr, type):
+    for attr_name, attr in data.__dict__.items():
+        if attr_name.startswith("__"):
+            continue
+        if isinstance(attr, ModuleType):
             retval[attr_name] = __generate_json_data(attr)
         elif isinstance(attr, Union[__PRIMITIVE_TYPES, list, tuple, dict]):
             retval[attr_name] = attr
         else:
-            raise ValueError(f"Encountered type that cannot be dumped into json. type:{field.type}")
+            raise ValueError(f"Encountered type that cannot be dumped into json. {attr_name}:{type(attr)}")
     return retval
 
-def write_to_json(path: str, data: type):
-    assert isinstance(data, type), "Provided data was not a dataclass"
-
+def write_to_json(path: str, data: ModuleType):
     json_data: __JsonData = __generate_json_data(data)
 
-    path_to_file = os.path.join(STATIC.PATHS.CONFIG_FOLDER, path)
+    path_to_file = os.path.join(PATHS.CONFIG_FOLDER, path)
     
     with open(path_to_file, "w+") as f:
         f.write(json.dumps(json_data, indent=2))
@@ -40,7 +38,7 @@ def write_to_json(path: str, data: type):
 #
 #
 #region get data from Json
-def __fill_data(contents: __JsonData, data: type):
+def __fill_data(contents: __JsonData, data: ModuleType | type):
     for key, value in contents.items():
         if not hasattr(data, key):
             raise ValueError(f"the provided json has the wrong contents. {key} is not a member of the dataclass")
@@ -53,10 +51,9 @@ def __fill_data(contents: __JsonData, data: type):
             raise ValueError(f"The values of the provided json have the wrong type. {key} has type {type(val)} in dataclass {data.__name__} but type {type(value)} in json")
 
 
-def read_from_json(path: str, data: type):
-    assert(isinstance(data, type))
+def read_from_json(path: str, data: ModuleType):
     contents: __JsonData
-    with open(os.path.join(STATIC.PATHS.CONFIG_FOLDER, path)) as f:
+    with open(os.path.join(PATHS.CONFIG_FOLDER, path)) as f:
         contents = json.loads(f.read())
     __fill_data(contents, data)
 #endregion
