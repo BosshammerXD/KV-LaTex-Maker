@@ -1,20 +1,20 @@
 import tkinter as tk
+from typing import Callable
+from Globals import DYNAMIC
 from KV_Drawer import KV_Drawer
+from UI.Menus.ColorMenu import ColorMenu
 from UI.Section import Section
 from UI.Popup import Popup
 import Globals.LANGUAGE as lang
 from Globals.STATIC import ROOT, BG_COLOR
 from Globals.STATIC.DEF_KV_VALUES import VARS
-from Globals.DYNAMIC import Colors
 from Globals.Funcs import load_config, update_config
 
 #region Menubar
 def build_menubar():
     menu = tk.Menu(ROOT)
-    options_menu = tk.Menu(menu, tearoff=0)
-    menu.add_cascade(label=lang.MENUBAR.OPTIONS, menu=options_menu)
-    options_menu.add_command(label=lang.MENUBAR.SETTINGS, command=lambda: None)  # Placeholder for settings action
-    options_menu.add_command(label=lang.MENUBAR.COLORS, command=lambda: None)  # Placeholder for colors action
+    menu.add_command(label=lang.MENUBAR.SETTINGS, command=lambda: None)  # Placeholder for settings action
+    menu.add_command(label=lang.MENUBAR.COLORS, command=ColorMenu)  # Placeholder for colors action
     ROOT.config(menu=menu)
 #endregion
 #
@@ -65,9 +65,20 @@ def build_sidebar(kv_drawer: KV_Drawer):
     def build_marking():
         marking_frame = Section(controls, lang.SECTIONS.MARKING_FRAME_NAME).frame
 
-        colors = Colors.keys()
+        colors = DYNAMIC.Colors.keys()
 
-        tk.OptionMenu(marking_frame, kv_drawer.current_col, *colors).pack(fill="x", pady=0)
+        option_menu = tk.OptionMenu(marking_frame, kv_drawer.current_col, *colors)
+        option_menu.pack(fill="x", pady=0)
+
+        def set_strVar(var: tk.StringVar, val: str) -> Callable[[], None]:
+            return lambda: var.set(val)
+        def update_options():
+            menu: tk.Menu = option_menu["menu"]
+            menu.delete(0, "end")
+            for opt in DYNAMIC.Colors.keys():
+                menu.add_command(label=opt, command=set_strVar(kv_drawer.current_col, opt))
+            kv_drawer.current_col.set(DYNAMIC.Colors.__iter__().__next__())
+        ROOT.bind("<<ColorsChanged>>", lambda _: update_options())
 
         next_prev_frame = tk.Frame(marking_frame)
         next_prev_frame.rowconfigure(0, weight=1)
@@ -106,6 +117,8 @@ def build_ui():
     ROOT.rowconfigure(0, weight=1)
     ROOT.columnconfigure(0, weight=3)  # Left column (canvas) gets more space
     ROOT.columnconfigure(1, weight=1)  # Right column (controls)
+
+    build_menubar()
 
     kv_drawer = build_KV_Diagram()
 
