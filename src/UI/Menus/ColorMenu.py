@@ -4,6 +4,7 @@ from tkinter import Entry, StringVar, Toplevel, Label, Frame, Button
 import Globals.LANGUAGE as lang
 from Globals import DYNAMIC
 from Globals.STATIC import ROOT
+from UI.Popup import Popup
 from UI.ScrollingFrame import ScrollingFrame
 
 class ColorMenu(Toplevel):
@@ -24,8 +25,7 @@ class ColorMenu(Toplevel):
 
             Label(self, text=color_name).grid(column=0, row=0, sticky="nswe")
             Label(self, text=color_value, fg=color_value).grid(column=1, row=0, sticky="nswe")
-            #TODO: Intergrate into Language Globals and Json
-            Button(self, text="remove", command=btn_func).grid(column=2, row=0, sticky="nswe")
+            Button(self, text=lang.REMOVE, command=btn_func).grid(column=2, row=0, sticky="nswe")
     
     def __init__(self) -> None:
         self.colors: dict[str, ColorMenu.ColorItem] = {}
@@ -38,8 +38,7 @@ class ColorMenu(Toplevel):
         self.rowconfigure(2, weight=5, uniform="group1")
         self.rowconfigure(3, weight=1, uniform="group1")
 
-        #TODO: Intergrate into Language Globals and Json
-        label = Label(self, text="here you can add/remove colors for the markings in th KV Diagramm.\nIf you add a color make sure that color is Defined in Latex.")
+        label = Label(self, text=lang.COLORS_MENU.DESCRIPTION)
         label.grid(column=0,row=0)
 
         self.__make_add_buttons()
@@ -48,10 +47,14 @@ class ColorMenu(Toplevel):
 
     def __add_color_ev(self):
         if not re.fullmatch(r"#[0-9a-fA_F]{6}", self.new_hex_col.get()):
-            print("Invalid Color")
+            INVALID_COL_POP_UP = Popup(lang.ERROR, lang.COLORS_MENU.INVALID_COLOR.format(hex_col=self.new_hex_col.get()))
+            INVALID_COL_POP_UP.add_button(lang.OK, lambda : None)
+            INVALID_COL_POP_UP.show()
             return
         if self.new_latex_col.get() in self.colors.keys():
-            print("Color already exists")
+            COL_EXISTS_POP_UP = Popup(lang.ERROR, lang.COLORS_MENU.COLOR_EXISTS.format(col_name=self.new_latex_col.get()))
+            COL_EXISTS_POP_UP.add_button(lang.OK, lambda : None)
+            COL_EXISTS_POP_UP.show()
             return
         col_item = ColorMenu.ColorItem(self.col_list_frame, self.new_latex_col.get(), self.new_hex_col.get(), self.colors)
         self.colors[self.new_latex_col.get()] = col_item
@@ -67,9 +70,8 @@ class ColorMenu(Toplevel):
         self.new_latex_col: StringVar = StringVar()
         self.new_hex_col: StringVar = StringVar(value="#RRGGBB")
 
-        #TODO: Intergrate into Language Globals and Json
-        Label(add_btns_frame, text="Latex Color").grid(column=0,row=0, sticky="swe")
-        Label(add_btns_frame, text="Color HexCode").grid(column=1,row=0, sticky="swe")
+        Label(add_btns_frame, text="Latex " + lang.COLORS_MENU.COLOR).grid(column=0,row=0, sticky="swe")
+        Label(add_btns_frame, text=lang.COLORS_MENU.COLOR + " HexCode").grid(column=1,row=0, sticky="swe")
         Entry(add_btns_frame, textvariable=self.new_latex_col).grid(column=0, row=1, sticky="nwe")
         Entry(add_btns_frame, textvariable=self.new_hex_col).grid(column=1, row=1, sticky="nwe")
         Button(add_btns_frame, text="Add Color", command=self.__add_color_ev).grid(column=2, row=1, sticky="nwe")
@@ -82,15 +84,13 @@ class ColorMenu(Toplevel):
         close_btns_frame.columnconfigure(0, weight=1)
         close_btns_frame.columnconfigure(1, weight=1)
 
-        #TODO: Intergrate into Language Globals and Json
-        Button(close_btns_frame, text="Apply", command=self.__apply).grid(column=0, row=0, sticky="nswe")
+        Button(close_btns_frame, text=lang.APPLY, command=self.__apply).grid(column=0, row=0, sticky="nswe")
         def apply_and_close():
             self.__apply()
             self.destroy()
-        #TODO: Intergrate into Language Globals and Json
         Button(
             close_btns_frame, 
-            text="Apply and Close", 
+            text=lang.APPLY_AND_CLOSE, 
             command=apply_and_close
         ).grid(column=1, row=0, sticky="nswe")
         close_btns_frame.grid(column=0,row=3, sticky="nswe")
