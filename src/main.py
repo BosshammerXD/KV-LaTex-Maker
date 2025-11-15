@@ -13,7 +13,7 @@ from Globals.Funcs import load_config, update_config
 #region Menubar
 def build_menubar():
     menu = tk.Menu(ROOT)
-    menu.add_command(label=lang.MENUBAR.SETTINGS, command=lambda: None)  # Placeholder for settings action
+    #menu.add_command(label=lang.MENUBAR.SETTINGS, command=lambda: None)  # Placeholder for settings action
     menu.add_command(label=lang.MENUBAR.COLORS, command=ColorMenu)  # Placeholder for colors action
     ROOT.config(menu=menu)
 #endregion
