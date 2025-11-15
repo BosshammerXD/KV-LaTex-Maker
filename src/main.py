@@ -77,7 +77,7 @@ def build_sidebar(kv_drawer: KV_Drawer):
             menu.delete(0, "end")
             for opt in DYNAMIC.Colors.keys():
                 menu.add_command(label=opt, command=set_strVar(kv_drawer.current_col, opt))
-            kv_drawer.current_col.set(DYNAMIC.Colors.__iter__().__next__())
+            kv_drawer.update_markings()
         ROOT.bind("<<ColorsChanged>>", lambda _: update_options())
 
         next_prev_frame = tk.Frame(marking_frame)

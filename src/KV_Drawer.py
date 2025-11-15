@@ -3,7 +3,7 @@ from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
 from KV_Utils import KV_Utils
-from Globals.DYNAMIC import Colors
+from Globals import DYNAMIC
 from Globals.STATIC import FONTS
 from Globals.STATIC.DEF_KV_VALUES import VALUES, TITLE
 
@@ -11,7 +11,6 @@ class KV_Drawer:
     """
     Class to draw Karnaugh maps using Tkinter.
     """
-    col_map: dict[str, str] = Colors
 
     def __init__(self, my_canvas: Canvas) -> None:
         self.my_canvas = my_canvas
@@ -37,9 +36,9 @@ class KV_Drawer:
 
         self.__col_index: int = 0
         self.__current_indices: list[int] = []
-        self.current_col: StringVar = StringVar(value="red")
+        self.current_col: StringVar = StringVar(value=DYNAMIC.Colors.__iter__().__next__())
         self.__marking_index: int = 0
-        self.current_col.trace_add("write", lambda *args: self.draw()) #type: ignore[no-untyped-call]
+        self.current_col.trace_add("write", lambda s1,s2,s3: self.draw()) 
         self.__markings : list[tuple[StringVar|str, list[int]]] = [(self.current_col, self.__current_indices)]
 
     #region: Properties
@@ -177,7 +176,7 @@ class KV_Drawer:
             if isinstance(col, StringVar):
                 col = col.get()
                 line_width = 4
-            col = self.col_map[col]
+            col = DYNAMIC.Colors[col]
 
             for block in KV_Utils.blocks:
                 (x1, y1), (x2, y2), openings = self.__get_rect_bounds(block, indices)
@@ -253,6 +252,42 @@ class KV_Drawer:
     #
     #
     #region: Helper Methods
+    def update_markings(self) -> None:
+        """
+        Removes all Markings that have a color that no longer exists
+        """
+        StringVar_removed: list[bool] = [False]
+        def is_key(col: StringVar | str, StringVar_removed: list[bool]) -> bool:
+            if isinstance(col, StringVar):
+                if not col.get() in DYNAMIC.Colors.keys():
+                    StringVar_removed[0] = True
+                    return False
+                else: return True
+            else:
+                return col in DYNAMIC.Colors.keys()
+        self.__markings = [
+            (col, val) for col, val in self.__markings if is_key(col, StringVar_removed)
+        ]
+        if not StringVar_removed[0]:
+            self.draw()
+            return
+        
+        if len(self.__markings):
+            col = self.__markings[0][0]
+            assert(isinstance(col, str))
+            self.current_col.set(col)
+            self.__markings[0] = (self.current_col, self.__markings[0][1])
+            self.__marking_index = 0
+            self.__current_indices = self.__markings[0][1]
+            self.draw()
+        else:
+            self.__marking_index = 0
+            self.__current_indices = []
+            self.current_col.set(DYNAMIC.Colors.__iter__().__next__())
+            self.__markings.append((self.current_col, self.__current_indices))
+
+
+
     def update_sizes(self) -> None:
         """
         Update the sizes of the cells based on the current canvas size.
@@ -329,9 +364,9 @@ class KV_Drawer:
         self.__current_indices.clear()
 
         self.__col_index += 1
-        if self.__col_index >= len(self.col_map):
+        if self.__col_index >= len(DYNAMIC.Colors):
             self.__col_index = 0
-        self.current_col.set(list(self.col_map.keys())[self.__col_index])
+        self.current_col.set(list(DYNAMIC.Colors.keys())[self.__col_index])
         
         self.__markings.insert(self.__marking_index + 1, (self.current_col, self.__current_indices))
         self.__marking_index += 1
