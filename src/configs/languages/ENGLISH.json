@@ -7,6 +7,10 @@
     "NEW": "New",
     "NEXT": "Next",
     "OK": "Ok",
+    "APPLY": "Apply",
+    "APPLY_AND_CLOSE": "Apply and close",
+    "REMOVE": "Remove",
+    "ERROR": "Error",
     "VAR_WARNING_MSG": "entering more then 6 variables,\n can cause performance issues.\nProceed?",
     "CPY_BUTTON": "Copy to clipboard",
     "SECTIONS": {
@@ -17,7 +21,13 @@
     },
     "MENUBAR": {
         "OPTIONS": "Options",
-        "HOTKEYS": "Hotkeys",
+        "SETTINGS": "Settings",
         "COLORS": "Colors"
+    },
+    "COLORS_MENU": {
+        "DESCRIPTION": "here you can add/remove colors for the markings in th KV Diagramm.\nIf you add a color make sure that color is Defined in Latex.",
+        "COLOR": "Color",
+        "INVALID_COLOR": "\"{hex_col}\" is not a valid hex Color\nPlease use the format \"#RRGGBB\".\nWhere:\n  RR = Amount of Red\n  GG = Amount of Green\n  BB = Amount of Blue\nwith 00 being None and FF being the most",
+        "COLOR_EXISTS": "the Color \"{col_name}\" already exists.\nIf you want to overide it please remove it and add again."
     }
 }

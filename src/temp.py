@@ -30,3 +30,6 @@ s1.set("b")
 popup_bonus()
 
 root.mainloop()
+
+import sys
+print(sys.path)
