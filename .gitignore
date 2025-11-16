@@ -208,3 +208,5 @@ __marimo__/
 
 # misc
 TODO.txt
+output/
+temp.py
