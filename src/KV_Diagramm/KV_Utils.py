@@ -61,11 +61,11 @@ class KV_Utils:
         return abs(x1 - x2) + abs(y1 - y2) == 1
 
     @classmethod
-    def make_blocks(cls, indices: list[int], n: int) -> None:
+    def make_blocks(cls, indices: list[int], num_vars: int) -> None:
         cls.blocks.clear()
 
         visited: dict[int, bool] = {i: False for i in indices}
-        coord_neighbours: dict[int, list[int]] = {i: list(filter(partial(cls.is_direct_neighbour, i, n=n), indices)) for i in indices}
+        coord_neighbours: dict[int, list[int]] = {i: list(filter(partial(cls.is_direct_neighbour, i, n=num_vars), indices)) for i in indices}
 
         for index in indices:
             if visited[index]:
@@ -122,22 +122,22 @@ class KV_Utils:
         return int(binary, 2)
 
     @staticmethod 
-    def IndexToCoordinate(index: int, n: int) -> tuple[int, int]:
-        if n < 1:
+    def IndexToCoordinate(index: int, num_vars: int) -> tuple[int, int]:
+        if num_vars < 1:
             raise ValueError("Number of variables must be at least 1")
-        elif index < 0 or index >= 2**n:
-            raise ValueError(f"Index out of bounds. index: {index}, n: {n}")
-        elif n == 1:
+        elif index < 0 or index >= 2**num_vars:
+            raise ValueError(f"Index out of bounds. index: {index}, n: {num_vars}")
+        elif num_vars == 1:
             return (0, index - 1)
 
         # Convert the index to binary
-        binary: str = bin(index)[2:].zfill(n)[::-1]
+        binary: str = bin(index)[2:].zfill(num_vars)[::-1]
 
-        col_bits: str = "".join(binary[i] for i in range(0, n, 2)).zfill(math.ceil(n/2))[::-1]
-        row_bits: str = "".join(binary[i] for i in range(1, n, 2)).zfill(math.floor(n/2))[::-1]
+        col_bits: str = "".join(binary[i] for i in range(0, num_vars, 2)).zfill(math.ceil(num_vars/2))[::-1]
+        row_bits: str = "".join(binary[i] for i in range(1, num_vars, 2)).zfill(math.floor(num_vars/2))[::-1]
 
-        possible_x: list[int] = list(range(2**math.ceil(n/2)))
-        possible_y: list[int] = list(range(2**math.floor(n/2)))
+        possible_x: list[int] = list(range(2**math.ceil(num_vars/2)))
+        possible_y: list[int] = list(range(2**math.floor(num_vars/2)))
         
         last: int = 0
         for c in col_bits:

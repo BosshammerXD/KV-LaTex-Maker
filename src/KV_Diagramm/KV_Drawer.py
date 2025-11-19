@@ -2,7 +2,7 @@ from collections.abc import Callable
 from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
-from KV_Utils import KV_Utils
+from .KV_Utils import KV_Utils
 from Globals import DYNAMIC
 from Globals.STATIC import FONTS
 from Globals.STATIC.DEF_KV_VALUES import VALUES, TITLE
