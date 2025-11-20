@@ -1,7 +1,7 @@
 import tkinter as tk
 from typing import Callable
 from Globals import DYNAMIC
-from KV_Diagramm.KV_Drawer import KV_Drawer
+from KV_Diagramm.KVManager import KVManager
 from UI.Menus.ColorMenu import ColorMenu
 from UI.Section import Section
 from UI.Popup import Popup
@@ -21,22 +21,22 @@ def build_menubar():
 #
 #
 #region KV Diagram
-def update_karnaugh_map(kv_drawer: KV_Drawer) -> None:
-    kv_drawer.my_vars = VARS.split(",")
+def update_karnaugh_map(KVManager: KVManager) -> None:
+    KVManager.kvdata.vars = VARS.split(",")
     
-    kv_drawer.draw()
+    KVManager.kvdrawer.draw()
 
-def build_KV_Diagram() -> KV_Drawer:
+def build_KV_Diagram() -> KVManager:
     canvas = tk.Canvas(ROOT, bg=BG_COLOR)
     canvas.grid(row=0, column=0, sticky="nsew")
 
-    return KV_Drawer(canvas)  # Placeholder for KV_Drawer instance
+    return KVManager(canvas)  # Placeholder for KVManager instance
 #endregion
 #
 #
 #
 #region Sidebar
-def build_sidebar(kv_drawer: KV_Drawer):
+def build_sidebar(KVManager: KVManager):
     # Controls on the right
     controls = tk.Frame(ROOT)
     controls.grid(row=0, column=1, sticky="nsew")
@@ -57,7 +57,9 @@ def build_sidebar(kv_drawer: KV_Drawer):
             if len(new_vars) > 6 and not sure:
                 var_warning.show()
                 return
-            kv_drawer.my_vars = new_vars
+            KVManager.kvdata.vars = new_vars
+            KVManager.kvdrawer.update_sizes()
+            KVManager.kvdrawer.draw()
         var_warning.add_button(lang.CONFIRM, lambda: set_vars(True))
         var_warning.add_button(lang.DENY, lambda: None)
         vars_entry.bind("<Return>", lambda event: set_vars())  # Bind Enter key to set_vars
@@ -67,7 +69,7 @@ def build_sidebar(kv_drawer: KV_Drawer):
 
         colors = DYNAMIC.Colors.keys()
 
-        option_menu = tk.OptionMenu(marking_frame, kv_drawer.current_col, *colors)
+        option_menu = tk.OptionMenu(marking_frame, KVManager.current_col, *colors)
         option_menu.pack(fill="x", pady=0)
 
         def set_strVar(var: tk.StringVar, val: str) -> Callable[[], None]:
@@ -76,8 +78,8 @@ def build_sidebar(kv_drawer: KV_Drawer):
             menu: tk.Menu = option_menu["menu"]
             menu.delete(0, "end")
             for opt in DYNAMIC.Colors.keys():
-                menu.add_command(label=opt, command=set_strVar(kv_drawer.current_col, opt))
-            kv_drawer.update_markings()
+                menu.add_command(label=opt, command=set_strVar(KVManager.current_col, opt))
+            KVManager.update_markings()
         ROOT.bind("<<ColorsChanged>>", lambda _: update_options())
 
         next_prev_frame = tk.Frame(marking_frame)
@@ -88,24 +90,24 @@ def build_sidebar(kv_drawer: KV_Drawer):
         next_prev_frame.pack(fill="x", pady=0)
         tk.Button(
             next_prev_frame, text=lang.PREVIOUS, 
-            command=lambda : kv_drawer.different_marking(-1)).grid(row=0, column=0, sticky="ew", padx=0)
+            command=lambda : KVManager.different_marking(-1)).grid(row=0, column=0, sticky="ew", padx=0)
         tk.Button(
             next_prev_frame, text=lang.NEW, 
-            command=lambda : kv_drawer.new_marking()).grid(row=0, column=1, sticky="ew", padx=0)
+            command=lambda : KVManager.new_marking()).grid(row=0, column=1, sticky="ew", padx=0)
         tk.Button(
             next_prev_frame, text=lang.NEXT, 
-            command=lambda : kv_drawer.different_marking(1)).grid(row=0, column=2, sticky="ew", padx=0)
+            command=lambda : KVManager.different_marking(1)).grid(row=0, column=2, sticky="ew", padx=0)
 
     def build_copy():
         def copy_to_clipboard():
             ROOT.clipboard_clear()
-            ROOT.clipboard_append(kv_drawer.get_kv_string())
+            ROOT.clipboard_append(KVManager.get_kv_string())
             ROOT.update()  # Keeps the clipboard content after the program ends
         tk.Button(controls, text=lang.CPY_BUTTON, command=copy_to_clipboard).pack(fill="x", pady=5)
 
-    build_title_input_section(lang.SECTIONS.TITLE_FRAME_NAME, kv_drawer.title)
+    build_title_input_section(lang.SECTIONS.TITLE_FRAME_NAME, KVManager.kvdata.title)
     build_vars()
-    build_title_input_section(lang.SECTIONS.VALS_FRAME_NAME, kv_drawer.vals)
+    build_title_input_section(lang.SECTIONS.VALS_FRAME_NAME, KVManager.kvdata.vals)
     build_marking()
     build_copy()
 #endregion
@@ -120,11 +122,11 @@ def build_ui():
 
     build_menubar()
 
-    kv_drawer = build_KV_Diagram()
+    KVManager = build_KV_Diagram()
 
-    build_sidebar(kv_drawer)
+    build_sidebar(KVManager)
 
-    update_karnaugh_map(kv_drawer)  # Call the function to update the map
+    update_karnaugh_map(KVManager)  # Call the function to update the map
 
 if __name__ == "__main__":
     load_config()

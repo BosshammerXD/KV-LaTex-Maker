@@ -2,7 +2,8 @@ from collections.abc import Callable
 from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
-from .KV_Utils import KV_Utils
+from . import KV_Utils
+from . import KVToLaTeX
 from Globals import DYNAMIC
 from Globals.STATIC import FONTS
 from Globals.STATIC.DEF_KV_VALUES import VALUES, TITLE
@@ -400,7 +401,7 @@ class KV_Drawer:
         """
         Get the Karnaugh map string representation.
         """
-        retval = KV_Utils.KARNAUGH_TEMPLATE
+        retval = KVToLaTeX.KARNAUGH_TEMPLATE
 
         #TODO: Generator for markings
 
@@ -426,7 +427,7 @@ class KV_Drawer:
 
                 side = f"[{openings}]" if openings else ""
 
-                oval.append(KV_Utils.OVAL_TEMPLATE.format(
+                oval.append(KVToLaTeX.OVAL_TEMPLATE.format(
                     x=x,
                     y=y,
                     delta_x=delta_x,
@@ -434,7 +435,7 @@ class KV_Drawer:
                     side=side
                 ))
             
-            ovals.append(KV_Utils.color_item("\n".join(oval), col))
+            ovals.append(KVToLaTeX.color_item("\n".join(oval), col))
             oval.clear()
 
 
