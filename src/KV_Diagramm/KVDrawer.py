@@ -37,23 +37,12 @@ class KVDrawer:
 
         self.__grid: GridData = GridData()
 
-        self.__width: int = canvas.winfo_width()
-        self.__height: int = canvas.winfo_height()
-
-        self.__large_font = (FONTS.TYPE, int(self.__grid.cell_size // 2))
-        self.__normal_font = (FONTS.TYPE, int(self.__grid.cell_size // 4))
-        self.__small_font = (FONTS.TYPE, int(self.__grid.cell_size // 6))
-
         canvas.bind("<Configure>", self.on_resize)
 
     def on_resize(self, event: Event) -> None: #type: ignore[no-untyped-def]
         """
         Handle window resize event.
         """
-        self.__width = int(self.__canvas.winfo_width())
-        self.__height = int(self.__canvas.winfo_height())
-        if self.__kvdata.get_num_vars() == 0:
-            return
         self.update_sizes()
         self.draw()
 
@@ -61,13 +50,15 @@ class KVDrawer:
         """
         Update the sizes of the cells based on the current canvas size.
         """
-        if len(self.__kvdata.vars) == 0:
+        self.__width = int(self.__canvas.winfo_width())
+        self.__height = int(self.__canvas.winfo_height())
+        if self.__kvdata.get_num_vars() == 0:
             return
-        import math
-        self.__kvdata.dimensions = (2**math.ceil(len(self.__kvdata.vars) / 2), 2**math.floor(len(self.__kvdata.vars) / 2))
-
+        
         num_left_vars = self.__kvdata.get_num_vars() // 2
         num_top_vars = self.__kvdata.get_num_vars() - num_left_vars
+
+        self.__kvdata.dimensions = (2**num_top_vars, 2**num_left_vars)
 
         cell_width = self.__width / (self.__kvdata.dimensions[0] + num_top_vars)
         cell_height = self.__height / (self.__kvdata.dimensions[1] + num_left_vars)
@@ -167,12 +158,12 @@ class KVDrawer:
 
     def __draw_vals_and_indices(self):
         for i in range(2**self.__kvdata.get_num_vars()):
-            x, y = self.__grid.grid_to_canvas_coord(*KVUtils.IndexToCoordinate(i, self.__kvdata.get_num_vars()))
+            x, y = self.__grid.grid_to_canvas_coord(*KVUtils.IndexToCoordinate(i))
             self.__canvas.create_text(
                 x + 0.8*self.__grid.cell_size, y + 0.85*self.__grid.cell_size, text=str(i), font=self.__small_font)
             if len(self.__kvdata.vals.get()) > i:
-                self.__canvas.create_text(
-                    x + 0.5*self.__grid.cell_size, y + 0.5*self.__grid.cell_size, text=self.__kvdata.vals.get()[i], font=self.__large_font)
+                cell_center = 0.5*self.__grid.cell_size
+                self.__canvas.create_text(x + cell_center, y + cell_center, text=self.__kvdata.vals.get()[i], font=self.__large_font)
 
     def __draw_markings(self):
         for index, marking in enumerate(self.__kvdata.markings):
@@ -212,9 +203,8 @@ class KVDrawer:
         marking.drawables = self.indices_to_markingdata(marking.indices)
 
     def indices_to_markingdata(self, indices: list[int]) -> list[MarkingData]:
-        KVUtils.make_blocks(indices, self.__kvdata.get_num_vars())
         ret: list[MarkingData] = []
-        for block in KVUtils.blocks:
+        for block in KVUtils.make_blocks(indices):
             (x1,y1), (x2,y2), openings = self.__get_rect_bounds(block, indices)
             ret.append(MarkingData(x1,y1,x2,y2,openings))
         return ret
@@ -226,21 +216,20 @@ class KVDrawer:
         kv_max_x = self.__kvdata.dimensions[0] - 1
         kv_max_y = self.__kvdata.dimensions[1] - 1
 
-        min_x, min_y, max_x, max_y = reduce(get_tl_and_br, [KVUtils.IndexToCoordinate(
-            i, self.__kvdata.get_num_vars()) for i in block], (kv_max_x, kv_max_y, 0, 0))
+        min_x, min_y, max_x, max_y = reduce(get_tl_and_br, [KVUtils.IndexToCoordinate(i) for i in block], (kv_max_x, kv_max_y, 0, 0))
         max_x += 1
         max_y += 1
         openings: Edge = Edge.NONE
-        if min_x == 0 and KVUtils.CoordinateToIndex(kv_max_x, min_y, self.__kvdata.get_num_vars()) in marking:
+        if min_x == 0 and KVUtils.CoordinateToIndex(kv_max_x, min_y) in marking:
             openings |= Edge.RIGHT
-        if max_x == self.__kvdata.dimensions[0] and KVUtils.CoordinateToIndex(0, min_y, self.__kvdata.get_num_vars()) in marking:
+        if max_x == self.__kvdata.dimensions[0] and KVUtils.CoordinateToIndex(0, min_y) in marking:
             openings |= Edge.LEFT
         if (Edge.LEFT | Edge.RIGHT) in openings:
             openings = Edge.NONE
 
-        if min_y == 0 and KVUtils.CoordinateToIndex(min_x, kv_max_y, self.__kvdata.get_num_vars()) in marking:
+        if min_y == 0 and KVUtils.CoordinateToIndex(min_x, kv_max_y) in marking:
             openings |= Edge.BOTTOM
-        if max_y == self.__kvdata.dimensions[1] and KVUtils.CoordinateToIndex(min_x, 0, len(self.__kvdata.vars)) in marking:
+        if max_y == self.__kvdata.dimensions[1] and KVUtils.CoordinateToIndex(min_x, 0) in marking:
             openings |= Edge.TOP
         if (Edge.BOTTOM | Edge.TOP) in openings:
             openings &= Edge.LEFT | Edge.RIGHT
@@ -263,4 +252,4 @@ class KVDrawer:
         if new_x < 0 or new_x >= self.__kvdata.dimensions[0] or new_y < 0 or new_y >= self.__kvdata.dimensions[1]:
             return -1
 
-        return KVUtils.CoordinateToIndex(new_x, new_y, self.__kvdata.get_num_vars())
+        return KVUtils.CoordinateToIndex(new_x, new_y)

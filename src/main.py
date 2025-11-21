@@ -2,6 +2,7 @@ import tkinter as tk
 from typing import Callable
 from Globals import DYNAMIC
 from KV_Diagramm.KVManager import KVManager
+from KV_Diagramm.KVManager import KVManager
 from UI.Menus.ColorMenu import ColorMenu
 from UI.Section import Section
 from UI.Popup import Popup
@@ -23,7 +24,7 @@ def build_menubar():
 #region KV Diagram
 def update_karnaugh_map(KVManager: KVManager) -> None:
     KVManager.kvdata.vars = VARS.split(",")
-    
+    KVManager.kvdrawer.update_sizes()
     KVManager.kvdrawer.draw()
 
 def build_KV_Diagram() -> KVManager:
@@ -126,7 +127,7 @@ def build_ui():
 
     build_sidebar(KVManager)
 
-    update_karnaugh_map(KVManager)  # Call the function to update the map
+    ROOT.after_idle(lambda: update_karnaugh_map(KVManager))  # Call the function to update the map
 
 if __name__ == "__main__":
     load_config()

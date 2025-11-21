@@ -2,7 +2,7 @@ from collections.abc import Callable
 from functools import reduce
 from tkinter import Canvas, Event, StringVar
 import math
-from . import KV_Utils
+from . import KVUtils
 from . import KVToLaTeX
 from Globals import DYNAMIC
 from Globals.STATIC import FONTS
@@ -78,11 +78,11 @@ class KV_Drawer:
             self.draw()
             return
 
-        neighbours = KV_Utils.find_kv_neigbours(x, self.__current_indices)
+        neighbours = KVUtils.find_kv_neigbours(x, self.__current_indices)
         if len(neighbours) == 0:
             print("No neighbours")
             return
-        different_bits = KV_Utils.find_different_bits(x, neighbours[0])
+        different_bits = KVUtils.find_different_bits(x, neighbours[0])
         if len(different_bits) != 1:
             print("Not a neighbour")
             return
@@ -119,16 +119,16 @@ class KV_Drawer:
         mid = len(self.__current_indices) // 2
         relative_index: int
         if index_in_current < mid: 
-            relative_index = KV_Utils.find_kv_neigbours(x, self.__current_indices[mid:])[0]
-            change = KV_Utils.find_different_bits(x, relative_index)[0]
+            relative_index = KVUtils.find_kv_neigbours(x, self.__current_indices[mid:])[0]
+            change = KVUtils.find_different_bits(x, relative_index)[0]
 
             val = relative_index & (1 << change)	
 
             self.__current_indices[mid:] = list(filter(lambda x: x & (1 << change) == val, self.__current_indices))
             self.__current_indices[:mid] = []
         else:
-            relative_index = KV_Utils.find_kv_neigbours(x, self.__current_indices[:mid])[0]
-            change = KV_Utils.find_different_bits(x, relative_index)[0]
+            relative_index = KVUtils.find_kv_neigbours(x, self.__current_indices[:mid])[0]
+            change = KVUtils.find_different_bits(x, relative_index)[0]
 
             val = relative_index & (1 << change)
 
@@ -159,7 +159,7 @@ class KV_Drawer:
         self.__draw_lines()
 
         for i in range(2**len(self.__vars)):
-            x,y = KV_Utils.IndexToCoordinate(i, len(self.__vars))
+            x,y = KVUtils.IndexToCoordinate(i)
             x *= self.__cell_size
             y *= self.__cell_size
             x += self.__start_x
@@ -172,14 +172,13 @@ class KV_Drawer:
             self.__draw_line(self.__vars[i], i)
         
         for col, indices in self.__markings:
-            KV_Utils.make_blocks(indices, len(self.__vars))
             line_width: int = 2
             if isinstance(col, StringVar):
                 col = col.get()
                 line_width = 4
             col = DYNAMIC.Colors[col]
 
-            for block in KV_Utils.blocks:
+            for block in KVUtils.make_blocks(indices):
                 (x1, y1), (x2, y2), openings = self.__get_rect_bounds(block, indices)
                 x1 = x1 * self.__cell_size + self.__start_x
                 y1 = y1 * self.__cell_size + self.__start_y
@@ -324,7 +323,7 @@ class KV_Drawer:
         if new_x < 0 or new_x >= self.dimensions[0] or new_y < 0 or new_y >= self.dimensions[1]:
             return -1
 
-        return KV_Utils.CoordinateToIndex(new_x, new_y, len(self.__vars))
+        return KVUtils.CoordinateToIndex(new_x, new_y)
     
     def __get_rect_bounds(self, block: list[int], marking:list[int]) -> tuple[tuple[int, int], tuple[int, int], str]:
         get_tl_and_br: Callable[[tuple[int,int,int,int], tuple[int,int]], tuple[int,int,int,int]] = lambda x, y: (min(x[0], y[0]), min(x[1], y[1]), max(x[2], y[0]), max(x[3], y[1]))
@@ -332,20 +331,20 @@ class KV_Drawer:
         kv_max_x = self.dimensions[0] - 1
         kv_max_y = self.dimensions[1] - 1
 
-        min_x, min_y, max_x, max_y = reduce(get_tl_and_br, [KV_Utils.IndexToCoordinate(i, len(self.__vars)) for i in block], (kv_max_x,kv_max_y,0,0))
+        min_x, min_y, max_x, max_y = reduce(get_tl_and_br, [KVUtils.IndexToCoordinate(i) for i in block], (kv_max_x,kv_max_y,0,0))
 
         openings:  str = ""
 
-        if min_x == 0 and KV_Utils.CoordinateToIndex(kv_max_x, min_y, len(self.__vars)) in marking:
+        if min_x == 0 and KVUtils.CoordinateToIndex(kv_max_x, min_y) in marking:
             openings += "r"
-        if max_x == self.dimensions[0] - 1 and KV_Utils.CoordinateToIndex(0, min_y, len(self.__vars)) in marking:
+        if max_x == self.dimensions[0] - 1 and KVUtils.CoordinateToIndex(0, min_y) in marking:
             openings += "l"
         if openings == "rl":
             openings = ""
         
-        if min_y == 0 and KV_Utils.CoordinateToIndex(min_x, kv_max_y, len(self.__vars)) in marking:
+        if min_y == 0 and KVUtils.CoordinateToIndex(min_x, kv_max_y) in marking:
             openings += "b"
-        if max_y == self.dimensions[1] - 1 and KV_Utils.CoordinateToIndex(min_x, 0, len(self.__vars)) in marking:
+        if max_y == self.dimensions[1] - 1 and KVUtils.CoordinateToIndex(min_x, 0) in marking:
             openings += "t"
         if openings.endswith("bt"):
             openings = openings[:-2]
@@ -402,6 +401,7 @@ class KV_Drawer:
         Get the Karnaugh map string representation.
         """
         retval = KVToLaTeX.KARNAUGH_TEMPLATE
+        retval = KVToLaTeX.KARNAUGH_TEMPLATE
 
         #TODO: Generator for markings
 
@@ -411,8 +411,7 @@ class KV_Drawer:
         for col, indices in self.__markings:
             if isinstance(col, StringVar):
                 col = col.get()
-            KV_Utils.make_blocks(indices, len(self.__vars))
-            for block in KV_Utils.blocks:
+            for block in KVUtils.make_blocks(indices):
                 (x1, y1), (x2, y2), openings = self.__get_rect_bounds(block, indices)
                 
                 x = x1 if "r" in openings else (x2 + 1 if "l" in openings else (x2 + x1) / 2 + 0.5)
@@ -435,6 +434,7 @@ class KV_Drawer:
                     side=side
                 ))
             
+            ovals.append(KVToLaTeX.color_item("\n".join(oval), col))
             ovals.append(KVToLaTeX.color_item("\n".join(oval), col))
             oval.clear()
 
