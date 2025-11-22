@@ -65,7 +65,7 @@ def build_sidebar(KVManager: KVManager):
         var_warning.add_button(lang.DENY, lambda: None)
         vars_entry.bind("<Return>", lambda event: set_vars())  # Bind Enter key to set_vars
 
-    def build_marking():
+    def build_marking_select():
         marking_frame = Section(controls, lang.SECTIONS.MARKING_FRAME_NAME).frame
 
         colors = DYNAMIC.Colors.keys()
@@ -106,10 +106,10 @@ def build_sidebar(KVManager: KVManager):
             ROOT.update()  # Keeps the clipboard content after the program ends
         tk.Button(controls, text=lang.CPY_BUTTON, command=copy_to_clipboard).pack(fill="x", pady=5)
 
-    build_title_input_section(lang.SECTIONS.TITLE_FRAME_NAME, KVManager.kvdata.title)
+    build_title_input_section(lang.SECTIONS.TITLE_FRAME_NAME, KVManager.title)
     build_vars()
     build_title_input_section(lang.SECTIONS.VALS_FRAME_NAME, KVManager.kvdata.vals)
-    build_marking()
+    build_marking_select()
     build_copy()
 #endregion
 #

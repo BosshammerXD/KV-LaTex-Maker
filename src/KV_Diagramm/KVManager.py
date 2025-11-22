@@ -11,12 +11,12 @@ from .KVDrawer import KVDrawer
 
 class KVManager:
     def __init__(self, canvas: Canvas) -> None:
-        self.current_col: StringVar = StringVar(value=DYNAMIC.Colors.__iter__().__next__())
+        self.current_col: StringVar = StringVar(value=next(iter(DYNAMIC.Colors)))
         self.__col_index = 0
+        self.title = StringVar(value="")
         values = StringVar(value=VALUES)
         values.trace_add("write", lambda x,y,z: self.kvdrawer.draw())
         self.kvdata = KVData(
-            StringVar(value=""),
             values
         )
         self.kvdata.markings.append(Marking(self.current_col.get(), DYNAMIC.Colors[self.current_col.get()]))
@@ -42,10 +42,13 @@ class KVManager:
             return
 
         neighbours = KVUtils.find_kv_neigbours(index, current_indices)
-        if len(neighbours) == 0:
+        try:
+            neighbour = next(neighbours)
+        except StopIteration:
             print("No neighbours")
             return
-        different_bits = KVUtils.find_different_bits(index, neighbours[0])
+        
+        different_bits = KVUtils.find_different_bits(index, neighbour)
         if len(different_bits) != 1:
             print("Not a neighbour")
             return
@@ -53,7 +56,7 @@ class KVManager:
         new_vals = [index]
 
         for val in current_indices:
-            if val == neighbours[0]:
+            if val == neighbour:
                 continue
             val = val ^ (1 << different_bits[0])
             new_vals.append(val)
@@ -85,8 +88,8 @@ class KVManager:
         mid = len(current_indices) // 2
         relative_index: int
         if index_in_current < mid:
-            relative_index = KVUtils.find_kv_neigbours(
-                x, current_indices[mid:])[0]
+            relative_index = next(KVUtils.find_kv_neigbours(
+                x, current_indices[mid:]))
             change = KVUtils.find_different_bits(x, relative_index)[0]
 
             val = relative_index & (1 << change)
@@ -95,8 +98,8 @@ class KVManager:
                 filter(lambda x: x & (1 << change) == val, current_indices))
             current_indices[:mid] = []
         else:
-            relative_index = KVUtils.find_kv_neigbours(
-                x, current_indices[:mid])[0]
+            relative_index = next(KVUtils.find_kv_neigbours(
+                x, current_indices[:mid]))
             change = KVUtils.find_different_bits(x, relative_index)[0]
 
             val = relative_index & (1 << change)
@@ -108,7 +111,7 @@ class KVManager:
         self.kvdrawer.draw()
 
     def get_kv_string(self) -> str:
-        return get_kv_string(self.kvdata)
+        return get_kv_string(self.kvdata, self.title.get())
 
 
     def __build_marking(self) -> Marking:
@@ -117,7 +120,6 @@ class KVManager:
         assert(tk_col is not None)
         return Marking(latex_col, tk_col)
 
-    #TODO: Move
     def new_marking(self) -> None:
         current_indices = self.kvdata.get_selected_marking().indices
         if len(current_indices) == 0:

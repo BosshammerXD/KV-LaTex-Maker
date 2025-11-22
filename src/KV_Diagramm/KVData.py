@@ -41,10 +41,10 @@ class Marking:
 
 @dataclass
 class KVData:
-    title: StringVar
     vals: StringVar
     selected: int = -1
-    dimensions: tuple[int, int] = (0, 0)
+    width: int = 0
+    height: int = 0
     vars: list[str] = field(default_factory=lambda: [])
     markings: list[Marking] = field(default_factory=lambda: [])
 

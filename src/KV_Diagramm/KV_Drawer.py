@@ -79,10 +79,12 @@ class KV_Drawer:
             return
 
         neighbours = KVUtils.find_kv_neigbours(x, self.__current_indices)
-        if len(neighbours) == 0:
+        try:
+            neighbour = next(neighbours)
+        except StopIteration:
             print("No neighbours")
             return
-        different_bits = KVUtils.find_different_bits(x, neighbours[0])
+        different_bits = KVUtils.find_different_bits(x, neighbour)
         if len(different_bits) != 1:
             print("Not a neighbour")
             return
@@ -90,7 +92,7 @@ class KV_Drawer:
         new_vals = [x]
 
         for val in self.__current_indices:
-            if val == neighbours[0]:
+            if val == neighbour:
                 continue
             val = val ^ (1 << different_bits[0])
             new_vals.append(val)
@@ -119,7 +121,7 @@ class KV_Drawer:
         mid = len(self.__current_indices) // 2
         relative_index: int
         if index_in_current < mid: 
-            relative_index = KVUtils.find_kv_neigbours(x, self.__current_indices[mid:])[0]
+            relative_index = next(KVUtils.find_kv_neigbours(x, self.__current_indices[mid:]))
             change = KVUtils.find_different_bits(x, relative_index)[0]
 
             val = relative_index & (1 << change)	
@@ -127,7 +129,7 @@ class KV_Drawer:
             self.__current_indices[mid:] = list(filter(lambda x: x & (1 << change) == val, self.__current_indices))
             self.__current_indices[:mid] = []
         else:
-            relative_index = KVUtils.find_kv_neigbours(x, self.__current_indices[:mid])[0]
+            relative_index = next(KVUtils.find_kv_neigbours(x, self.__current_indices[:mid]))
             change = KVUtils.find_different_bits(x, relative_index)[0]
 
             val = relative_index & (1 << change)

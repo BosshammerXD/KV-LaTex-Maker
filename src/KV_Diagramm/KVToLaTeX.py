@@ -15,7 +15,7 @@ COLOR_ITEM: str = "\\textcolor{{{color}}}{{{item}}}"
 def color_item(item: str, color: str) -> str:
     return COLOR_ITEM.format(color=color, item=item)
 
-def get_kv_string(kvdata: KVData) -> str:
+def get_kv_string(kvdata: KVData, title: str) -> str:
     """
     Get the Karnaugh map string representation.
     """
@@ -38,7 +38,7 @@ def get_kv_string(kvdata: KVData) -> str:
             x = x1 if Edge.RIGHT in openings else (x2 if Edge.LEFT in openings else (x2 + x1) / 2)
             y = y1 if Edge.BOTTOM in openings else (y2 if Edge.TOP in openings else (y2 + y1) / 2)
 
-            y = kvdata.dimensions[1] - y
+            y = kvdata.height - y
 
             delta_x = (x2 - x1) * (2 if Edge.LEFT in openings or Edge.RIGHT in openings else 1) - 0.1
             delta_y = (y2 - y1) * (2 if Edge.TOP in openings or Edge.BOTTOM in openings else 1) - 0.1
@@ -58,7 +58,7 @@ def get_kv_string(kvdata: KVData) -> str:
 
     return retval. format(
         num_vars=len(kvdata.vars),
-        title=kvdata.title.get(),
+        title=title,
         my_vars="".join(
             map(lambda x: "{{{}}}".format(x), reversed(kvdata.vars))),
         vals="".join(kvdata.vals.get()),

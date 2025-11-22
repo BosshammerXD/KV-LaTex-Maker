@@ -1,4 +1,5 @@
 from collections import deque
+from collections.abc import Iterator
 from functools import partial
 
 
@@ -6,9 +7,9 @@ def is_kv_neighbour(v1: int, v2: int) -> bool:
     return bin(v1 ^ v2).count("1") == 1
 
 
-def find_kv_neigbours(val: int, others: list[int]) -> list[int]:
+def find_kv_neigbours(val: int, others: list[int]) -> Iterator[int]:
     f = partial(is_kv_neighbour, v2=val)
-    return list(filter(f, others))
+    return filter(f, others)
 
 
 def find_different_bits(v1: int, v2: int) -> list[int]:
