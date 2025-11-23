@@ -15,6 +15,14 @@ COLOR_ITEM: str = "\\textcolor{{{color}}}{{{item}}}"
 def color_item(item: str, color: str) -> str:
     return COLOR_ITEM.format(color=color, item=item)
 
+def __calc_position(low: float, high: float, low_bool: bool, high_bool: bool) -> float:
+    ret: list[float] = []
+    if low_bool:
+        ret.append(low)
+    if high_bool:
+        ret.append(high)
+    return sum(ret) / len(ret)
+
 def get_kv_string(kvdata: KVData, title: str) -> str:
     """
     Get the Karnaugh map string representation.
@@ -33,17 +41,17 @@ def get_kv_string(kvdata: KVData, title: str) -> str:
             y1 = markingdata.y1
             x2 = markingdata.x2
             y2 = markingdata.y2
-            openings = markingdata.openings
-        
-            x = x1 if Edge.RIGHT in openings else (x2 if Edge.LEFT in openings else (x2 + x1) / 2)
-            y = y1 if Edge.BOTTOM in openings else (y2 if Edge.TOP in openings else (y2 + y1) / 2)
+            edges = markingdata.edges
+
+            
+            x = __calc_position(x1, x2, Edge.RIGHT in edges, Edge.LEFT in edges)
+            y = __calc_position(y1, y2, Edge.BOTTOM in edges, Edge.TOP in edges)
 
             y = kvdata.height - y
 
-            delta_x = (x2 - x1) * (2 if Edge.LEFT in openings or Edge.RIGHT in openings else 1) - 0.1
-            delta_y = (y2 - y1) * (2 if Edge.TOP in openings or Edge.BOTTOM in openings else 1) - 0.1
-
-            side = f"[{str(openings)}]" if openings else ""
+            delta_x = (x2 - x1) * (2 if not (Edge.LEFT in edges and Edge.RIGHT in edges) else 1) - 0.1
+            delta_y = (y2 - y1) * (2 if not (Edge.TOP in edges and Edge.BOTTOM in edges) else 1) - 0.1
+            side = f"[{edges.kv_str()}]" if ~edges else ""
 
             oval.append(OVAL_TEMPLATE.format(
                 x=x,

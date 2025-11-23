@@ -4,24 +4,21 @@ from functools import partial
 
 
 def is_kv_neighbour(v1: int, v2: int) -> bool:
-    return bin(v1 ^ v2).count("1") == 1
+    return (v1 ^ v2).bit_count() == 1
 
 
 def find_kv_neigbours(val: int, others: list[int]) -> Iterator[int]:
     f = partial(is_kv_neighbour, v2=val)
     return filter(f, others)
 
-
-def find_different_bits(v1: int, v2: int) -> list[int]:
+def find_different_bits(v1: int, v2: int) -> Iterator[int]:
     differences = v1 ^ v2
     index = 0
-    indices: list[int] = []
     while differences:
         if differences & 1:
-            indices.append(index)
+            yield index
         index += 1
         differences >>= 1
-    return indices
 
 
 def make_blocks(indices: list[int]) -> list[list[int]]:
@@ -41,6 +38,9 @@ def make_blocks(indices: list[int]) -> list[list[int]]:
                     island.append(coord_to_indices.pop(neighbour))
         islands.append(island)
     return islands
+
+def expand_block(indices: list[int], bit: int) -> None:
+    indices.extend([i ^ (1 << bit) for i in indices])
 
 def join_ints_binary(value1: int, value2: int) -> int:
     """interweaves two binary values be reading over them bit for bit and extending another value by their bits

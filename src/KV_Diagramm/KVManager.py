@@ -33,37 +33,24 @@ class KVManager:
         current_marking = self.kvdata.get_selected_marking()
         current_indices = current_marking.indices
         if index == -1:
-            print("Invalid click")
             return
         if len(current_indices) == 0:
             current_indices.append(index)
-            self.kvdrawer.update_markingdata(current_marking)
-            self.kvdrawer.draw()
-            return
+        else:
+            neighbours = KVUtils.find_kv_neigbours(index, current_indices)
+            try:
+                neighbour = next(neighbours)
+                different_bits = KVUtils.find_different_bits(index, neighbour)
+                different_bit = next(different_bits)
+            except StopIteration:
+                return    
+            try:
+                next(different_bits)
+                return
+            except StopIteration:
+                KVUtils.expand_block(current_indices, different_bit)
 
-        neighbours = KVUtils.find_kv_neigbours(index, current_indices)
-        try:
-            neighbour = next(neighbours)
-        except StopIteration:
-            print("No neighbours")
-            return
-        
-        different_bits = KVUtils.find_different_bits(index, neighbour)
-        if len(different_bits) != 1:
-            print("Not a neighbour")
-            return
-
-        new_vals = [index]
-
-        for val in current_indices:
-            if val == neighbour:
-                continue
-            val = val ^ (1 << different_bits[0])
-            new_vals.append(val)
-
-        current_indices.extend(new_vals)
-        self.kvdrawer.update_markingdata(current_marking)
-        self.kvdrawer.draw()
+        self.kvdrawer.update_markingdata(current_marking, True)
 
     def on_right_click(self, event: Event) -> None:
         """
@@ -90,7 +77,7 @@ class KVManager:
         if index_in_current < mid:
             relative_index = next(KVUtils.find_kv_neigbours(
                 x, current_indices[mid:]))
-            change = KVUtils.find_different_bits(x, relative_index)[0]
+            change = next(KVUtils.find_different_bits(x, relative_index))
 
             val = relative_index & (1 << change)
 
@@ -100,7 +87,7 @@ class KVManager:
         else:
             relative_index = next(KVUtils.find_kv_neigbours(
                 x, current_indices[:mid]))
-            change = KVUtils.find_different_bits(x, relative_index)[0]
+            change = next(KVUtils.find_different_bits(x, relative_index))
 
             val = relative_index & (1 << change)
 
@@ -108,7 +95,6 @@ class KVManager:
                 filter(lambda x: x & (1 << change) == val, current_indices))
             current_indices[mid:] = []
         self.kvdrawer.update_markingdata(current_marking)
-        self.kvdrawer.draw()
 
     def get_kv_string(self) -> str:
         return get_kv_string(self.kvdata, self.title.get())

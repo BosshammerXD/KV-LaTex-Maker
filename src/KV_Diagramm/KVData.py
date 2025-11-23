@@ -9,15 +9,15 @@ class Edge(IntFlag):
     TOP = 4
     BOTTOM = 8
 
-    def __str__(self) -> str:
+    def kv_str(self) -> str:
         ret: str = ""
-        if Edge.RIGHT in self:
+        if Edge.RIGHT in self and Edge.LEFT not in self:
             ret += "r"
-        if Edge.LEFT in self:
+        if Edge.LEFT in self and Edge.RIGHT not in self:
             ret += "l"
-        if Edge.TOP in self:
+        if Edge.TOP in self and Edge.BOTTOM not in self:
             ret += "t"
-        if Edge.BOTTOM in self:
+        if Edge.BOTTOM in self and Edge.TOP not in self:
             ret += "b"
         return ret
 
@@ -27,7 +27,7 @@ class MarkingData:
     y1: float
     x2: float
     y2: float
-    openings: Edge
+    edges: Edge
     marking_lines: list[int] = field(default_factory=lambda: [])
 
 
