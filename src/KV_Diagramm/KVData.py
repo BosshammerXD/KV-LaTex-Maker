@@ -28,7 +28,7 @@ class MarkingData:
     x2: float
     y2: float
     edges: Edge
-    marking_lines: list[int] = field(default_factory=lambda: [])
+    tag: str
 
 
 @dataclass

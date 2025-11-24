@@ -5,6 +5,9 @@ from typing import Optional
 from .KVData import Edge, KVData, Marking, MarkingData
 from . import KVUtils
 from Globals.STATIC import FONTS
+from collections.abc import Iterator
+from itertools import count
+from collections import deque
 
 @dataclass
 class GridData:
@@ -37,12 +40,18 @@ class GridData:
 
 
 class KVDrawer:
+    __MARKING_PREFIX = "marking_"
     def __init__(self, canvas: Canvas, kvdata: KVData) -> None:
         self.__canvas = canvas
         self.__kvdata = kvdata
         self.__grid: GridData = GridData()
         canvas.bind("<Configure>", self.on_resize)
-
+        self.__counter: Iterator[int] = count()
+        self.__free_ids: deque[int] = deque()
+    #
+    #
+    #
+    #region Events
     def on_resize(self, event: Event) -> None: #type: ignore[no-untyped-def]
         """
         Handle window resize event.
@@ -79,7 +88,14 @@ class KVDrawer:
         self.__small_font = (FONTS.TYPE, int(self.__grid.cell_size // 6))
 
         self.draw()
-
+    #endregion
+    #
+    #
+    #
+    #region Drawing
+    #TODO: implementd system to only redraw necessary vals
+    #TODO: look if it is maybe better to resize elements on resize instead of redrawing them
+    #TODO: if above not pratical only redraw, when movement is done to reduce lagspikes
     def draw(self) -> None:
         self.__canvas.delete("all")
         if self.__kvdata.get_num_vars() == 0:
@@ -92,7 +108,7 @@ class KVDrawer:
             line_width = 4 if marking is self.__kvdata.get_selected_marking() else 2
             col = marking.tkinter_color
             for marking_data in marking.drawables:
-                self.__canvas.delete(*marking_data.marking_lines)
+                self.__canvas.delete(marking_data.tag)
                 self.draw_marking_lines(marking_data, col, line_width)
 
     def __draw_grid(self) -> None:
@@ -101,10 +117,10 @@ class KVDrawer:
         """
         for c in range(1, self.__kvdata.width):
             x = self.__grid.grid_to_canvas_x(c)
-            self.__canvas.create_line(x, self.__grid.y, x, self.__grid.y + self.__grid.height)
+            self.__canvas.create_line(x, self.__grid.y, x, self.__grid.y + self.__grid.height, tags=("grid",))
         for r in range(1, self.__kvdata.height):
             y = self.__grid.grid_to_canvas_y(r)
-            self.__canvas.create_line(self.__grid.x, y, self.__grid.x + self.__grid.width, y)
+            self.__canvas.create_line(self.__grid.x, y, self.__grid.x + self.__grid.width, y, tags=("grid",))
 
     def __draw_vars(self):
         """
@@ -113,7 +129,8 @@ class KVDrawer:
         for index, var in enumerate(self.__kvdata.vars):
             layer: int = index // 2
             distance_to_topleft: int = 2**layer * self.__grid.cell_size
-            distance_to_grid: float = index // 2 * self.__grid.cell_size * 0.5 + 0.1*self.__grid.cell_size
+            cell_center = self.__grid.cell_size * 0.5
+            distance_to_grid: float = layer * cell_center + 0.1*self.__grid.cell_size
             x: float = self.__grid.x
             y: float = self.__grid.y
             is_row: bool = bool(index % 2)
@@ -134,7 +151,7 @@ class KVDrawer:
         end_moving = self.__grid.get_end_y() if is_row else self.__grid.get_end_x()
         moving = y if is_row else x
         #offset from the grid/last var
-        offset = (x if is_row else y) - 0.25*self.__grid.cell_size
+        offset = (x if is_row else y) - 0.2*self.__grid.cell_size
         for i in float_range(moving, end_moving, self.__grid.cell_size * 2**(layer + 2)):
             end = i + self.__grid.cell_size * 2**(layer + 1)
             if end > end_moving:
@@ -170,36 +187,32 @@ class KVDrawer:
                 x + low_in_cell_x, y + low_in_cell_y, text=str(i), font=self.__small_font)
 
     def draw_marking_lines(self, marking_data: MarkingData, col: str, line_width: int):
-        marking_data.marking_lines.clear()
         x1 = self.__grid.grid_to_canvas_x(marking_data.x1) + self.__grid.marking_offset
         y1 = self.__grid.grid_to_canvas_y(marking_data.y1) + self.__grid.marking_offset
         x2 = self.__grid.grid_to_canvas_x(marking_data.x2) - self.__grid.marking_offset
         y2 = self.__grid.grid_to_canvas_y(marking_data.y2) - self.__grid.marking_offset
         openings = marking_data.edges
-        marking_lines = marking_data.marking_lines
+        tag = marking_data.tag
 
         if Edge.LEFT in openings:
-            marking_lines.append(
-                self.__canvas.create_line(x1, y1, x1, y2, fill=col, width=line_width)
-            )
+            self.__canvas.create_line(x1, y1, x1, y2, fill=col, width=line_width, tags=(tag,))
         if Edge.RIGHT in openings:
-            marking_lines.append(
-                self.__canvas.create_line(x2, y1, x2, y2, fill=col, width=line_width)
-            )
+            self.__canvas.create_line(x2, y1, x2, y2, fill=col, width=line_width, tags=(tag,))
         if Edge.TOP in openings:
-            marking_lines.append(
-                self.__canvas.create_line(x1, y1, x2, y1, fill=col, width=line_width)
-            )
+            self.__canvas.create_line(x1, y1, x2, y1, fill=col, width=line_width, tags=(tag,))
         if Edge.BOTTOM in openings:
-            marking_lines.append(
-                self.__canvas.create_line(x1, y2, x2, y2, fill=col, width=line_width)
-            )
-
+            self.__canvas.create_line(x1, y2, x2, y2, fill=col, width=line_width, tags=(tag,))
+    #endregion
+    #
+    #
+    #
+    #region Interfacing methods
     def update_markingdata(self, marking: Optional[Marking] = None, is_selected: bool = True) -> None:
         if marking is None:
             marking = self.__kvdata.get_selected_marking()
         for marking_data in marking.drawables:
-            self.__canvas.delete(*marking_data.marking_lines)
+            self.__canvas.delete(marking_data.tag)
+            self.__remove_marking_id(marking_data.tag)
         marking.drawables = self.indices_to_markingdata(marking.indices)
         line_width = 4 if is_selected else 2
         for marking_data in marking.drawables:
@@ -211,34 +224,36 @@ class KVDrawer:
         kv_max_y = self.__kvdata.height - 1
         for block in KVUtils.make_blocks(indices):
             (x1,y1), (x2,y2) = self.__get_rect_bounds(block)
-            openings: Edge = Edge.RIGHT | Edge.LEFT | Edge.TOP | Edge.BOTTOM
-            if x1 == 0 and KVUtils.CoordinateToIndex(kv_max_x, y1) in indices:
-                openings &= ~Edge.LEFT
-            if x2 == self.__kvdata.width and KVUtils.CoordinateToIndex(0, y1) in indices:
-                openings &= ~Edge.RIGHT
+            openings: Edge = Edge.NONE
+            if not(x1 == 0 and KVUtils.CoordinateToIndex(kv_max_x, y1) in indices):
+                openings |= Edge.LEFT
+            if not(x2 == self.__kvdata.width and KVUtils.CoordinateToIndex(0, y1) in indices):
+                openings |= Edge.RIGHT
 
-            if y1 == 0 and KVUtils.CoordinateToIndex(x1, kv_max_y) in indices:
-                openings &= ~Edge.TOP
-            if y2 == self.__kvdata.height and KVUtils.CoordinateToIndex(x1, 0) in indices:
-                openings &= ~Edge.BOTTOM
+            if not(y1 == 0 and KVUtils.CoordinateToIndex(x1, kv_max_y) in indices):
+                openings |= Edge.TOP
+            if not(y2 == self.__kvdata.height and KVUtils.CoordinateToIndex(x1, 0) in indices):
+                openings |= Edge.BOTTOM
             
-            ret.append(MarkingData(x1,y1,x2,y2,openings))
+            ret.append(MarkingData(x1,y1,x2,y2,openings, self.__gen_marking_id()))
         return ret
-
+    #endregion
+    #
+    #
+    #
+    #region Utility methods
     def __get_rect_bounds(self, block: list[int]) -> tuple[tuple[int, int], tuple[int, int]]:
         coords = [KVUtils.IndexToCoordinate(i) for i in block]
         xs, ys = zip(*coords)
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-        max_x += 1
-        max_y += 1
+        min_x, max_x = min(xs), max(xs) + 1
+        min_y, max_y = min(ys), max(ys) + 1
 
         return ((min_x, min_y), (max_x, max_y))
     
     def remove_marking(self, marking: Marking) -> None:
         marking.indices.clear()
         for md in marking.drawables:
-            self.__canvas.delete(*md.marking_lines)
+            self.__canvas.delete(md.tag)
         marking.drawables.clear()
     
     def canvas_to_kv_index(self, x: float, y: float) -> int:
@@ -252,3 +267,21 @@ class KVDrawer:
             return -1
 
         return KVUtils.CoordinateToIndex(new_x, new_y)
+    
+    def __gen_marking_id(self) -> str:
+        if self.__free_ids:
+            n = self.__free_ids.popleft()
+        else:
+            n = next(self.__counter)
+        return f"{KVDrawer.__MARKING_PREFIX}{n}"
+    
+    def __remove_marking_id(self, id_str: str) -> None:
+        if not id_str.startswith(KVDrawer.__MARKING_PREFIX):
+            return
+        try:
+            n = int(id_str[len(KVDrawer.__MARKING_PREFIX):])
+        except ValueError:
+            return
+        if n >= 0 and n not in self.__free_ids:
+            self.__free_ids.append(n)
+    #endregion
