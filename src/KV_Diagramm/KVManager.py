@@ -1,3 +1,6 @@
+from collections import deque
+from collections.abc import Iterator
+from itertools import count
 from tkinter import Canvas, Event, StringVar
 
 from Globals import DYNAMIC
@@ -19,7 +22,7 @@ class KVManager:
         self.kvdata = KVData(
             values
         )
-        self.kvdata.markings.append(Marking(self.current_col.get(), DYNAMIC.Colors[self.current_col.get()]))
+        self.kvdata.markings.append(self.__build_marking())
         self.kvdata.selected = 0
         self.kvdrawer = KVDrawer(canvas, self.kvdata)
         canvas.bind("<Button-1>", self.on_left_click)
@@ -50,7 +53,7 @@ class KVManager:
             except StopIteration:
                 KVUtils.expand_block(current_indices, different_bit)
 
-        self.kvdrawer.update_markingdata(current_marking, True)
+        self.kvdrawer.update_markingdata(current_marking, self.kvdata.selected)
 
     def on_right_click(self, event: Event) -> None:
         """
@@ -67,7 +70,7 @@ class KVManager:
             return
 
         if len(current_indices) == 1:
-            self.kvdrawer.remove_marking(current_marking)
+            self.remove_marking(self.kvdata.selected, current_marking)
             return
 
         index_in_current = current_indices.index(x)
@@ -94,17 +97,16 @@ class KVManager:
             current_indices[:mid] = list(
                 filter(lambda x: x & (1 << change) == val, current_indices))
             current_indices[mid:] = []
-        self.kvdrawer.update_markingdata(current_marking)
+        self.kvdrawer.update_markingdata(current_marking, self.kvdata.selected)
 
     def get_kv_string(self) -> str:
         return get_kv_string(self.kvdata, self.title.get())
 
 
     def __build_marking(self) -> Marking:
-        latex_col = self.current_col.get()
-        tk_col = DYNAMIC.Colors.get(latex_col)
-        assert(tk_col is not None)
-        return Marking(latex_col, tk_col)
+        latex_col: str = self.current_col.get()
+        tk_col: str = DYNAMIC.Colors[latex_col]
+        return Marking(latex_col, tk_col, KVManager.__gen_marking_id())
 
     def new_marking(self) -> None:
         current_indices = self.kvdata.get_selected_marking().indices
@@ -124,27 +126,30 @@ class KVManager:
     def different_marking(self, offset: int) -> None:
         current_indices = self.kvdata.get_selected_marking().indices
         if len(current_indices) == 0 and len(self.kvdata.markings) > 1:
-            self.kvdrawer.remove_marking(
-                self.kvdata.markings.pop(self.kvdata.selected)
+            self.remove_marking(
+                self.kvdata.selected,
+                self.kvdata.get_selected_marking()
             )
+            self.kvdata.markings.pop(self.kvdata.selected)
         else:
             self.kvdata.selected += offset
 
         marking_len = len(self.kvdata.markings)
-        if self.kvdata.selected < 0:
+        while self.kvdata.selected < 0:
             self.kvdata.selected += marking_len
-        elif self.kvdata.selected >= marking_len:
+        while self.kvdata.selected >= marking_len:
             self.kvdata.selected -= marking_len
-
-        val = self.kvdata.markings[self.kvdata.selected].latex_color
+        val = self.kvdata.get_selected_marking().latex_color
 
         self.current_col.set(val)
-        self.kvdrawer.draw()
+        self.kvdrawer.kv_markings.update_selected(self.kvdata.selected)
+
     
     def update_markings(self) -> None:
         """
         Removes all Markings that have a color that no longer exists
         """
+        #TODO: update so it works with the new system
         self.kvdata.markings = [
             m for m in self.kvdata.markings if m.latex_color in DYNAMIC.Colors.keys()
         ]
@@ -157,3 +162,36 @@ class KVManager:
             self.kvdata.selected = 0
             self.current_col.set(DYNAMIC.Colors.__iter__().__next__())
             self.kvdata.markings.append(self.__build_marking())
+    
+    def remove_marking(self, index: int, marking: Marking):
+        marking.indices.clear()
+        self.kvdrawer.kv_markings.update_marking(index, marking)
+        self.__remove_marking_id(marking.tag)
+    
+    __MARKING_PREFIX: str = "marking_"
+    __free_ids: deque[int] = deque()
+    __counter: Iterator[int] = count()
+
+    @classmethod
+    def __gen_marking_id(cls) -> str:
+        if cls.__free_ids:
+            n = cls.__free_ids.popleft()
+        else:
+            n = next(cls.__counter)
+        return f"{cls.__MARKING_PREFIX}{n}"
+    
+    @classmethod
+    def __remove_marking_id(cls, id_str: str) -> None:
+        if not id_str.startswith(cls.__MARKING_PREFIX):
+            return
+        try:
+            n = int(id_str[len(cls.__MARKING_PREFIX):])
+        except ValueError:
+            return
+        if n >= 0 and n not in cls.__free_ids:
+            cls.__free_ids.append(n)
+    
+    @classmethod
+    def temp(cls):
+        print(cls.__gen_marking_id())
+        print(cls.__gen_marking_id())

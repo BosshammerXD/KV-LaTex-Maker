@@ -29,16 +29,15 @@ class MarkingData:
     x2: float
     y2: float
     edges: Edge
-    tag: str
 
 
 @dataclass
 class Marking:
     latex_color: str
     tkinter_color: str
+    tag: str
     indices: list[int] =  field(default_factory=lambda: list[int]())
     drawables: list[MarkingData] = field(default_factory=lambda: [])
-
 
 @dataclass
 class KVData:

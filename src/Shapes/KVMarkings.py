@@ -15,6 +15,12 @@ class _Edge_Lines:
     top: int = 0
     bottom: int = 0
 
+    def reset(self) -> None:
+        self.left = 0
+        self.right = 0
+        self.top = 0
+        self.bottom = 0
+
     def delete_item(self, index: Edge) -> int:
         ret = self[index]
         self[index] = 0
@@ -87,15 +93,24 @@ class KVMarkings(KVDrawable):
             for edge in edge_line:
                 self._canvas.itemconfig(edge, width=linewidth)
 
+    def __quick_delete(self, index: int, tag: str):
+        self._canvas.delete(tag)
+        if index != self.__selected:
+            self.__marking_ids.pop(index)
+        else:
+            for edge_line in self.__marking_ids[index]:
+                edge_line.reset()
+
     def update_marking(self, index: int, marking: Marking) -> None:
         assert(len(self.__marking_ids) >= index)
         if len(self.__marking_ids) == index:
             self.__marking_ids.append([_Edge_Lines() for _ in range(len(marking.drawables))])
+        if len(marking.indices) == 0:
+            self.__quick_delete(index, marking.tag)
         IterTools.ensure_count(self.__marking_ids[index], len(marking.drawables), lambda _: _Edge_Lines(), lambda x: x.delete(self._canvas))
         col = marking.tkinter_color
         for i, markingdata in enumerate(marking.drawables):
-            self.__set_lines(markingdata.edges, self.__marking_ids[index][i], col, markingdata.tag)
-        print(self.__marking_ids[index])
+            self.__set_lines(markingdata.edges, self.__marking_ids[index][i], col, marking.tag)
 
     def update(self, markings: list[Marking]):
         for index, marking in enumerate(markings):
@@ -103,17 +118,20 @@ class KVMarkings(KVDrawable):
 
 
     def draw(self, kv_grid: KVGrid, markings: list[Marking]) -> None:
-        for index, marking in enumerate(markings):
-            self.draw_marking(kv_grid, marking, index)
+        index: int = 0
+        for marking in markings:
+            if not len(marking.indices):
+                continue
+            self.draw_marking(kv_grid, index, marking)
+            index += 1
     
-    def draw_marking(self, kv_grid: KVGrid, marking: Marking, index: int) -> None:
+    def draw_marking(self, kv_grid: KVGrid, index: int, marking: Marking) -> None:
         marking_offset: float = 0.05
 
         for i, marking_data in enumerate(marking.drawables):
             x1, y1 = kv_grid.grid_to_canvas_coord(marking_data.x1 + marking_offset, marking_data.y1 + marking_offset)
             x2, y2 = kv_grid.grid_to_canvas_coord(marking_data.x2 - marking_offset, marking_data.y2 - marking_offset)
             edge_lines = self.__marking_ids[index][i]
-            print(x1,y1,x2,y2,edge_lines)
             if edge_lines[Edge.LEFT]:
                 self._canvas.coords(edge_lines[Edge.LEFT], x1, y1, x1, y2)
             if edge_lines[Edge.RIGHT]:
