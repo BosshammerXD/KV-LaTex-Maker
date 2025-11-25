@@ -20,6 +20,7 @@ class Edge(IntFlag):
         if Edge.BOTTOM in self and Edge.TOP not in self:
             ret += "b"
         return ret
+EDGES: tuple[Edge, Edge, Edge, Edge] = (Edge.LEFT, Edge.RIGHT, Edge.TOP, Edge.BOTTOM)
 
 @dataclass
 class MarkingData:

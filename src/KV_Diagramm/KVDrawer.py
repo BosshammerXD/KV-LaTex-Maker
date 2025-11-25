@@ -2,6 +2,12 @@ from dataclasses import dataclass
 from tkinter import Canvas, Event
 from typing import Optional
 
+from Shapes.KVGrid import KVGrid
+from Shapes.KVValues import KVValues
+from Shapes.KVVars import KVVars
+from Shapes.KVIndices import KVIndices
+from Shapes.KVMarkings import KVMarkings
+
 from .KVData import Edge, KVData, Marking, MarkingData
 from . import KVUtils
 from Globals.STATIC import FONTS
@@ -45,6 +51,11 @@ class KVDrawer:
         self.__canvas = canvas
         self.__kvdata = kvdata
         self.__grid: GridData = GridData()
+        self.grid: KVGrid = KVGrid(canvas)
+        self.kv_vars: KVVars = KVVars(canvas)
+        self.kv_values: KVValues = KVValues(canvas)
+        self.kv_indices: KVIndices = KVIndices(canvas)
+        self.kv_markings: KVMarkings = KVMarkings(canvas)
         canvas.bind("<Configure>", self.on_resize)
         self.__counter: Iterator[int] = count()
         self.__free_ids: deque[int] = deque()
@@ -56,8 +67,11 @@ class KVDrawer:
         """
         Handle window resize event.
         """
+        old_width = self.__width
+        old_height = self.__height
         self.update_sizes()
-        self.draw()
+        self.__canvas.scale("all", 0, 0, self.__width / old_width, self.__height / old_height)
+        #self.draw()
 
     def update_sizes(self) -> None:
         """
@@ -77,6 +91,10 @@ class KVDrawer:
         cell_width = self.__width / (self.__kvdata.width + num_top_vars)
         cell_height = self.__height / (self.__kvdata.height + num_left_vars)
 
+        self.kv_vars.update(self.__kvdata.vars)
+        self.grid.update(self.__kvdata.width, self.__kvdata.height)
+        self.kv_values.update(self.__kvdata.vals.get())
+        self.kv_indices.update(2**self.__kvdata.get_num_vars())
         self.__grid.update_size(
             min(cell_width, cell_height), 
             self.__kvdata.width, self.__kvdata.height,
@@ -94,22 +112,27 @@ class KVDrawer:
     #
     #region Drawing
     #TODO: implementd system to only redraw necessary vals
-    #TODO: look if it is maybe better to resize elements on resize instead of redrawing them
+    #TODO: resize elements on resize instead of redrawing them
     #TODO: if above not pratical only redraw, when movement is done to reduce lagspikes
     def draw(self) -> None:
-        self.__canvas.delete("all")
+        #self.__canvas.delete("all")
         if self.__kvdata.get_num_vars() == 0:
             return
-        self.__draw_vars()
-        self.__draw_grid()
-        self.__draw_indices()
-        self.__draw_vals()
-        for marking in self.__kvdata.markings:
-            line_width = 4 if marking is self.__kvdata.get_selected_marking() else 2
-            col = marking.tkinter_color
-            for marking_data in marking.drawables:
-                self.__canvas.delete(marking_data.tag)
-                self.draw_marking_lines(marking_data, col, line_width)
+        #self.__draw_vars()
+        #self.__draw_grid()
+        self.grid.draw(self.__width, self.__height)
+        self.kv_vars.draw(self.grid)
+        self.kv_values.draw(self.grid)
+        self.kv_indices.draw(self.grid)
+        self.kv_markings.draw(self.grid, self.__kvdata.markings)
+        #self.__draw_indices()
+        #self.__draw_vals()
+        #for marking in self.__kvdata.markings:
+        #    line_width = 4 if marking is self.__kvdata.get_selected_marking() else 2
+        #    col = marking.tkinter_color
+        #    for marking_data in marking.drawables:
+        #        self.__canvas.delete(marking_data.tag)
+        #        self.draw_marking_lines(marking_data, col, line_width)
 
     def __draw_grid(self) -> None:
         """
@@ -117,10 +140,10 @@ class KVDrawer:
         """
         for c in range(1, self.__kvdata.width):
             x = self.__grid.grid_to_canvas_x(c)
-            self.__canvas.create_line(x, self.__grid.y, x, self.__grid.y + self.__grid.height, tags=("grid",))
+            self.__canvas.create_line(x, self.__grid.y, x, self.__grid.y + self.__grid.height, tags=("grid_col",))
         for r in range(1, self.__kvdata.height):
             y = self.__grid.grid_to_canvas_y(r)
-            self.__canvas.create_line(self.__grid.x, y, self.__grid.x + self.__grid.width, y, tags=("grid",))
+            self.__canvas.create_line(self.__grid.x, y, self.__grid.x + self.__grid.width, y, tags=("grid_row",))
 
     def __draw_vars(self):
         """
@@ -176,7 +199,7 @@ class KVDrawer:
         cell_center = 0.5*self.__grid.cell_size
         for index, char in enumerate(self.__kvdata.vals.get()):
             x,y = self.__grid.grid_to_canvas_coord(*KVUtils.IndexToCoordinate(index))
-            self.__canvas.create_text(x + cell_center, y + cell_center, text=char, font=self.__large_font)
+            self.__canvas.create_text(x + cell_center, y + cell_center, text=char, font=self.__large_font, tags=(f"val_{index}",))
     
     def __draw_indices(self):
         low_in_cell_x: float = 0.8 * self.__grid.cell_size
@@ -184,7 +207,7 @@ class KVDrawer:
         for i in range(2**self.__kvdata.get_num_vars()):
             x, y = self.__grid.grid_to_canvas_coord(*KVUtils.IndexToCoordinate(i))
             self.__canvas.create_text(
-                x + low_in_cell_x, y + low_in_cell_y, text=str(i), font=self.__small_font)
+                x + low_in_cell_x, y + low_in_cell_y, text=str(i), font=self.__small_font, tags=(f"index_{i}",))
 
     def draw_marking_lines(self, marking_data: MarkingData, col: str, line_width: int):
         x1 = self.__grid.grid_to_canvas_x(marking_data.x1) + self.__grid.marking_offset
@@ -210,13 +233,9 @@ class KVDrawer:
     def update_markingdata(self, marking: Optional[Marking] = None, is_selected: bool = True) -> None:
         if marking is None:
             marking = self.__kvdata.get_selected_marking()
-        for marking_data in marking.drawables:
-            self.__canvas.delete(marking_data.tag)
-            self.__remove_marking_id(marking_data.tag)
         marking.drawables = self.indices_to_markingdata(marking.indices)
-        line_width = 4 if is_selected else 2
-        for marking_data in marking.drawables:
-            self.draw_marking_lines(marking_data, marking.tkinter_color, line_width)
+        self.kv_markings.update_marking(self.__kvdata.selected, marking)
+        self.kv_markings.update_selected(self.__kvdata.selected)
 
     def indices_to_markingdata(self, indices: list[int]) -> list[MarkingData]:
         ret: list[MarkingData] = []

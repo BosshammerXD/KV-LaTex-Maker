@@ -42,6 +42,14 @@ def make_blocks(indices: list[int]) -> list[list[int]]:
 def expand_block(indices: list[int], bit: int) -> None:
     indices.extend([i ^ (1 << bit) for i in indices])
 
+def get_rect_bounds_from_block(block: list[int]) -> tuple[tuple[int, int], tuple[int, int]]:
+        coords = [IndexToCoordinate(i) for i in block]
+        xs, ys = zip(*coords)
+        min_x, max_x = min(xs), max(xs) + 1
+        min_y, max_y = min(ys), max(ys) + 1
+
+        return ((min_x, min_y), (max_x, max_y))
+
 def join_ints_binary(value1: int, value2: int) -> int:
     """interweaves two binary values be reading over them bit for bit and extending another value by their bits
     value1 will generate the 0,2,4,.. bit of the retval
