@@ -10,7 +10,6 @@ from .KVData import Edge, KVData, Marking, MarkingData
 from . import KVUtils
 
 class KVDrawer:
-    __MARKING_PREFIX = "marking_"
     def __init__(self, canvas: Canvas, kvdata: KVData) -> None:
         self.__canvas = canvas
         self.__kvdata = kvdata
@@ -19,8 +18,7 @@ class KVDrawer:
         self.kv_values: KVValues = KVValues(canvas)
         self.kv_indices: KVIndices = KVIndices(canvas)
         self.kv_markings: KVMarkings = KVMarkings(canvas)
-        canvas.bind("<Configure>", self.on_resize)
-        self.__canvas.after_idle(self.update_sizes)
+        self.__last_resize_id: str = ""
     #
     #
     #
@@ -29,16 +27,14 @@ class KVDrawer:
         """
         Handle window resize event.
         """
-        old_width = self.__width
-        old_height = self.__height
-        self.update_sizes()
-        self.__canvas.scale("all", 0, 0, self.__width / old_width, self.__height / old_height)
-        #self.draw()
+        if self.__last_resize_id == "":
+            self.__last_resize_id = self.__canvas.after(10, self.update_sizes)
 
     def update_sizes(self) -> None:
         """
         Update the sizes of the cells based on the current canvas size.
         """
+        self.__last_resize_id = ""
         self.__width = self.__canvas.winfo_width()
         self.__height = self.__canvas.winfo_height()
         if self.__kvdata.get_num_vars() == 0:
@@ -52,16 +48,16 @@ class KVDrawer:
 
         self.kv_vars.update(self.__kvdata.vars)
         self.grid.update(self.__kvdata.width, self.__kvdata.height)
-        self.kv_values.update(self.__kvdata.vals.get())
+        self.kv_values.update(self.__kvdata.vals)
         self.kv_indices.update(2**self.__kvdata.get_num_vars())
-        self.draw()
+        self.draw_all()
     #endregion
     #
     #
     #
     #region Drawing
     #TODO: if above not pratical only redraw, when movement is done to reduce lagspikes
-    def draw(self) -> None:
+    def draw_all(self) -> None:
         if self.__kvdata.get_num_vars() == 0:
             return
         self.grid.draw(self.__width, self.__height)

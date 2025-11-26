@@ -1,5 +1,4 @@
 from enum import IntFlag
-from tkinter import StringVar
 from dataclasses import dataclass, field
 
 class Edge(IntFlag):
@@ -41,7 +40,7 @@ class Marking:
 
 @dataclass
 class KVData:
-    vals: StringVar
+    vals: str
     selected: int = -1
     width: int = 0
     height: int = 0

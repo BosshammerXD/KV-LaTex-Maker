@@ -1,6 +1,8 @@
 from collections import deque
 from collections.abc import Iterator
 from functools import partial
+from typing import Optional
+from IterTools import take_n
 
 
 def is_kv_neighbour(v1: int, v2: int) -> bool:
@@ -8,8 +10,7 @@ def is_kv_neighbour(v1: int, v2: int) -> bool:
 
 
 def find_kv_neigbours(val: int, others: list[int]) -> Iterator[int]:
-    f = partial(is_kv_neighbour, v2=val)
-    return filter(f, others)
+    return filter(partial(is_kv_neighbour, v2=val), others)
 
 def find_different_bits(v1: int, v2: int) -> Iterator[int]:
     differences = v1 ^ v2
@@ -20,6 +21,12 @@ def find_different_bits(v1: int, v2: int) -> Iterator[int]:
         index += 1
         differences >>= 1
 
+def get_different_bit(index: int, others: list[int]) -> Optional[int]:
+    if len(neighbourlist := take_n(find_kv_neigbours(index, others), 1)) == 0:
+        return None
+    ret: int = index ^ neighbourlist[0]
+    assert(ret.bit_count() == 1)
+    return ret.bit_length() - 1
 
 def make_blocks(indices: list[int]) -> list[list[int]]:
     #modified Flood Fill Algorithm
@@ -41,6 +48,21 @@ def make_blocks(indices: list[int]) -> list[list[int]]:
 
 def expand_block(indices: list[int], bit: int) -> None:
     indices.extend([i ^ (1 << bit) for i in indices])
+
+def shrink_block(indices: list[int], index: int) -> None:
+    def compare_bit(v1: int, v2: int, bit_offset: int) -> bool:
+        return bool(1 & ((v1 ^ v2) >> bit_offset)) 
+    mid = len(indices) // 2
+    relative_index: int
+    index_in_current: int = indices.index(index)
+    if index_in_current < mid:
+        relative_index = next(find_kv_neigbours(index, indices[mid:]))
+    else:
+        relative_index = next(find_kv_neigbours(index, indices[:mid]))
+    change = next(find_different_bits(index, relative_index))
+
+    indices[:mid] = list(filter(lambda x: compare_bit(x, relative_index, change), indices))
+    indices[mid:] = []
 
 def get_rect_bounds_from_block(block: list[int]) -> tuple[tuple[int, int], tuple[int, int]]:
         coords = [IndexToCoordinate(i) for i in block]
@@ -103,13 +125,3 @@ def IndexToCoordinate(index: int) -> tuple[int, int]:
     y = inv_gray_code(gray_y) 
 
     return x, y
-
-if __name__ == "__main__":
-    import random
-    rand = random.Random(102937)
-    for i in range(1000):
-        CoordinateToIndex(rand.randint(0,31),rand.randint(0,31))
-        IndexToCoordinate(rand.randint(0,1023))
-        is_kv_neighbour(rand.randint(0,1023),rand.randint(0,1023))
-        make_blocks([0,1,2,3])
-        find_different_bits(rand.randint(0,1023),rand.randint(0,1023))

@@ -105,7 +105,7 @@ class KVMarkings(KVDrawable):
         assert(len(self.__marking_ids) >= index)
         if len(self.__marking_ids) == index:
             self.__marking_ids.append([_Edge_Lines() for _ in range(len(marking.drawables))])
-        if len(marking.indices) == 0:
+        elif len(marking.indices) == 0:
             self.__quick_delete(index, marking.tag)
         IterTools.ensure_count(self.__marking_ids[index], len(marking.drawables), lambda _: _Edge_Lines(), lambda x: x.delete(self._canvas))
         col = marking.tkinter_color

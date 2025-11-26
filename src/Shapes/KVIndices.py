@@ -15,6 +15,8 @@ class KVIndices(KVDrawableFromGrid):
         self.__index_ids: list[int] = []
     
     def update(self, num_indices: int):
+        if num_indices == len(self.__index_ids):
+            return
         len_ids = len(self.__index_ids)
         def factory(i: int) -> int:
             return self.__make_text(str(len_ids + i))
