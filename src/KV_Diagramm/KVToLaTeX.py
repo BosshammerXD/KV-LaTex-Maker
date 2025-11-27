@@ -64,11 +64,11 @@ def get_kv_string(kvdata: KVData, title: str) -> str:
             ovals.append(color_item("\n".join(oval), col))
         oval.clear()
 
-    return retval. format(
+    return retval.format(
         num_vars=len(kvdata.vars),
         title=title,
         my_vars="".join(
             map(lambda x: "{{{}}}".format(x), reversed(kvdata.vars))),
-        vals="".join(kvdata.vals.get()),
+        vals="".join(kvdata.vals),
         ovals="%\n".join(ovals)
     )

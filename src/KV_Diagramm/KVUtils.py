@@ -61,7 +61,7 @@ def shrink_block(indices: list[int], index: int) -> None:
         relative_index = next(find_kv_neigbours(index, indices[:mid]))
     change = next(find_different_bits(index, relative_index))
 
-    indices[:mid] = list(filter(lambda x: compare_bit(x, relative_index, change), indices))
+    indices[:mid] = list(filter(lambda x: not compare_bit(x, relative_index, change), indices))
     indices[mid:] = []
 
 def get_rect_bounds_from_block(block: list[int]) -> tuple[tuple[int, int], tuple[int, int]]:

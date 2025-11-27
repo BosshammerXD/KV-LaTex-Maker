@@ -5,7 +5,6 @@ from KV_Diagramm.KVManager import KVManager
 from KV_Diagramm.KVInputHandler import KVInputHandler
 from UI.Menus.ColorMenu import ColorMenu
 from UI.Section import Section
-from UI.Popup import Popup
 import Globals.LANGUAGE as lang
 from Globals.STATIC import ROOT, BG_COLOR
 from Globals.STATIC.DEF_KV_VALUES import VARS, VALUES
@@ -14,23 +13,18 @@ from Globals.Funcs import load_config, update_config
 #region Menubar
 def build_menubar():
     menu = tk.Menu(ROOT)
-    #menu.add_command(label=lang.MENUBAR.SETTINGS, command=lambda: None)  # Placeholder for settings action
-    menu.add_command(label=lang.MENUBAR.COLORS, command=ColorMenu)  # Placeholder for colors action
+    #menu.add_command(label=lang.MENUBAR.SETTINGS, command=lambda: None)
+    menu.add_command(label=lang.MENUBAR.COLORS, command=ColorMenu)
     ROOT.config(menu=menu)
 #endregion
 #
 #
 #
 #region KV Diagram
-def update_karnaugh_map(KVManager: KVManager) -> None:
-    KVManager.kvdata.vars = VARS.split(",")
-    KVManager.kvdrawer.update_sizes()
-
-def build_KV_Diagram() -> tuple[KVManager, KVInputHandler]:
+def build_KV_Diagram() -> KVManager:
     canvas = tk.Canvas(ROOT, bg=BG_COLOR)
     canvas.grid(row=0, column=0, sticky="nsew")
-    kv_manager = KVManager(canvas)
-    return kv_manager, KVInputHandler(canvas, kv_manager, kv_manager.kvdata)
+    return KVManager(canvas)
 #endregion
 #
 #
@@ -50,18 +44,12 @@ def build_sidebar(kv_manager: KVManager, kv_input_handler: KVInputHandler):
     def build_vars():
         vars_input = tk.StringVar(value=VARS)
         build_title_input_section(lang.SECTIONS.VAR_FRAME_NAME, vars_input)
-        #TODO: figure out what to do with popup now
-        #var_warning = Popup(lang.WARNING, lang.VAR_WARNING_MSG)
-        #def set_vars(sure: bool = False) -> None:
-        #    new_vars = vars_input.get().split(",")
-        #    if len(new_vars) > 6 and not sure:
-        #        var_warning.show()
-        #        return
-        #    kv_manager.kvdata.vars = new_vars
-        #    kv_manager.kvdrawer.update_sizes()
-        #var_warning.add_button(lang.CONFIRM, lambda: set_vars(True))
-        #var_warning.add_button(lang.DENY, lambda: None)
-        kv_input_handler.link_vars(vars_input)  # Bind Enter key to set_vars
+        kv_input_handler.link_vars(vars_input) 
+    
+    def build_vals():
+        vals = tk.StringVar(value=VALUES)
+        build_title_input_section(lang.SECTIONS.VALS_FRAME_NAME, vals)
+        kv_input_handler.link_vals(vals)
 
     def build_marking_select():
         marking_frame = Section(controls, lang.SECTIONS.MARKING_FRAME_NAME).frame
@@ -79,6 +67,7 @@ def build_sidebar(kv_manager: KVManager, kv_input_handler: KVInputHandler):
             for opt in DYNAMIC.Colors.keys():
                 menu.add_command(label=opt, command=set_strVar(kv_manager.current_col, opt))
             kv_manager.update_markings()
+        kv_input_handler.link_marking_color(kv_manager.current_col)
         ROOT.bind("<<ColorsChanged>>", lambda _: update_options())
 
         next_prev_frame = tk.Frame(marking_frame)
@@ -106,9 +95,7 @@ def build_sidebar(kv_manager: KVManager, kv_input_handler: KVInputHandler):
 
     build_title_input_section(lang.SECTIONS.TITLE_FRAME_NAME, kv_manager.title)
     build_vars()
-    vals = tk.StringVar(value=VALUES)
-    build_title_input_section(lang.SECTIONS.VALS_FRAME_NAME, vals)
-    kv_input_handler.link_vals(vals)
+    build_vals()
     build_marking_select()
     build_copy()
 #endregion
@@ -123,11 +110,9 @@ def build_ui():
 
     build_menubar()
 
-    kv_manager, kv_input_handler = build_KV_Diagram()
+    kv_manager = build_KV_Diagram()
 
-    build_sidebar(kv_manager, kv_input_handler)
-
-    ROOT.after_idle(lambda: update_karnaugh_map(kv_manager))  # Call the function to update the map
+    build_sidebar(kv_manager, kv_manager.input_handler)  # Call the function to update the map
 
 if __name__ == "__main__":
     load_config()

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from tkinter import Canvas
 
 import IterTools
-from KV_Diagramm.KVData import Marking, Edge, EDGES
+from KV_Diagramm.KVData import Marking, Edge, EDGES, MarkingData
 
 from .KVDrawable import KVDrawable
 from .KVGrid import KVGrid
@@ -78,60 +78,64 @@ class KVMarkings(KVDrawable):
     def __init__(self, canvas: Canvas) -> None:
         super().__init__(canvas)
         self.__selected: int = -1
-        self.__marking_ids: list[list[_Edge_Lines]] = []
+        self.__marking_ids: list[tuple[str, list[_Edge_Lines]]] = []
+
+    def set_color(self, tag: str, col: str) -> None:
+        self._canvas.itemconfig(tag, fill=col)
 
     def update_selected(self, selected: int):
-        assert(selected >= 0)
-        assert(len(self.__marking_ids) > selected)
-        if self.__selected != -1:  
-            self.__set_width(self.__selected, self.__SLIM_WIDTH)
-        self.__set_width(selected, self.__THICK_WIDTH)
-        self.__selected = selected
-    
-    def __set_width(self, index: int, linewidth: int):
-        for edge_line in self.__marking_ids[index]:
-            for edge in edge_line:
-                self._canvas.itemconfig(edge, width=linewidth)
+        if selected < 0:
+            self.__selected = -1
+        elif selected != self.__selected:
+            assert(len(self.__marking_ids) > selected)
+            if self.__selected != -1:  
+                self._canvas.itemconfig(self.__marking_ids[self.__selected][0], width=self.__SLIM_WIDTH)
+            self._canvas.itemconfig(self.__marking_ids[selected][0], width=self.__THICK_WIDTH)
+            self.__selected = selected
 
-    def __quick_delete(self, index: int, tag: str):
+    def delete_marking(self, index: int, tag: str):
         self._canvas.delete(tag)
         if index != self.__selected:
             self.__marking_ids.pop(index)
-        else:
-            for edge_line in self.__marking_ids[index]:
+        elif self.__selected < 0:
+            for edge_line in self.__marking_ids[index][1]:
                 edge_line.reset()
 
-    def update_marking(self, index: int, marking: Marking) -> None:
-        assert(len(self.__marking_ids) >= index)
-        if len(self.__marking_ids) == index:
-            self.__marking_ids.append([_Edge_Lines() for _ in range(len(marking.drawables))])
-        elif len(marking.indices) == 0:
-            self.__quick_delete(index, marking.tag)
-        IterTools.ensure_count(self.__marking_ids[index], len(marking.drawables), lambda _: _Edge_Lines(), lambda x: x.delete(self._canvas))
-        col = marking.tkinter_color
-        for i, markingdata in enumerate(marking.drawables):
-            self.__set_lines(markingdata.edges, self.__marking_ids[index][i], col, marking.tag)
+    def new_marking(self, index: int, marking: Marking) -> None:
+        self.__marking_ids.insert(index, (marking.TAG, [_Edge_Lines() for _ in range(len(marking.drawables))]))
+        self.update_marking(index, marking.drawables, marking.tkinter_color)
+
+    def update_marking(self, index: int, drawables: list[MarkingData], col: str) -> None:
+        assert(len(self.__marking_ids) > index)
+        tag, edge_lines = self.__marking_ids[index]
+        if drawables:
+            IterTools.ensure_count(edge_lines, len(drawables), lambda _: _Edge_Lines(), lambda x: x.delete(self._canvas))
+        elif self.__marking_ids[index]:
+            self._canvas.delete(tag)
+            self.__marking_ids[index] = (tag, [])
+        for markingdata, edge_line in zip(drawables, edge_lines):
+            self.__set_lines(markingdata.edges, edge_line, col, tag)
 
     def update(self, markings: list[Marking]):
         for index, marking in enumerate(markings):
-            self.update_marking(index, marking)
+            self.update_marking(index, marking.drawables, marking.tkinter_color)
 
 
-    def draw(self, kv_grid: KVGrid, markings: list[Marking]) -> None:
+    def draw(self, kv_grid: KVGrid, markings: Iterator[Marking]) -> None:
         index: int = 0
         for marking in markings:
             if not len(marking.indices):
                 continue
-            self.draw_marking(kv_grid, index, marking)
+            self.draw_marking(kv_grid, index, marking.drawables)
             index += 1
     
-    def draw_marking(self, kv_grid: KVGrid, index: int, marking: Marking) -> None:
+    def draw_marking(self, kv_grid: KVGrid, index: int, drawables: list[MarkingData]) -> None:
         marking_offset: float = 0.05
 
-        for i, marking_data in enumerate(marking.drawables):
+        for i, marking_data in enumerate(drawables):
             x1, y1 = kv_grid.grid_to_canvas_coord(marking_data.x1 + marking_offset, marking_data.y1 + marking_offset)
             x2, y2 = kv_grid.grid_to_canvas_coord(marking_data.x2 - marking_offset, marking_data.y2 - marking_offset)
-            edge_lines = self.__marking_ids[index][i]
+            edge_lines = self.__marking_ids[index][1][i]
             if edge_lines[Edge.LEFT]:
                 self._canvas.coords(edge_lines[Edge.LEFT], x1, y1, x1, y2)
             if edge_lines[Edge.RIGHT]:
