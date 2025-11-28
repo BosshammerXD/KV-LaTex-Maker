@@ -1,8 +1,6 @@
 import tkinter as tk
-from typing import Callable
-from Globals import DYNAMIC
 from KV_Diagramm.KVManager import KVManager
-from KV_Diagramm.KVInputHandler import KVInputHandler
+from UI.KVColorsMenu import KVColorsMenu
 from UI.Menus.ColorMenu import ColorMenu
 from UI.Section import Section
 import Globals.LANGUAGE as lang
@@ -21,17 +19,20 @@ def build_menubar():
 #
 #
 #region KV Diagram
-def build_KV_Diagram() -> tuple[KVManager, KVInputHandler]:
+def build_KV_Diagram() -> KVManager:
     canvas = tk.Canvas(ROOT, bg=BG_COLOR)
     canvas.grid(row=0, column=0, sticky="nsew")
     kv_manager = KVManager(canvas)
-    return kv_manager, KVInputHandler(canvas, kv_manager)
+    canvas.bind("<Configure>", kv_manager.on_resize)
+    canvas.bind("<Button-1>", kv_manager.on_left_click)
+    canvas.bind("<Button-3>", kv_manager.on_right_click)
+    return kv_manager
 #endregion
 #
 #
 #
 #region Sidebar
-def build_sidebar(kv_manager: KVManager, kv_input_handler: KVInputHandler):
+def build_sidebar(kv_manager: KVManager):
     # Controls on the right
     controls = tk.Frame(ROOT)
     controls.grid(row=0, column=1, sticky="nsew")
@@ -45,31 +46,20 @@ def build_sidebar(kv_manager: KVManager, kv_input_handler: KVInputHandler):
     def build_vars():
         vars_input = tk.StringVar(value=VARS)
         build_title_input_section(lang.SECTIONS.VAR_FRAME_NAME, vars_input)
-        kv_input_handler.link_vars(vars_input) 
+        kv_manager.link_vars(vars_input) 
     
     def build_vals():
         vals = tk.StringVar(value=VALUES)
         build_title_input_section(lang.SECTIONS.VALS_FRAME_NAME, vals)
-        kv_input_handler.link_vals(vals)
+        kv_manager.link_vals(vals)
 
     def build_marking_select():
         marking_frame = Section(controls, lang.SECTIONS.MARKING_FRAME_NAME).frame
 
-        colors = DYNAMIC.Colors.keys()
-
-        option_menu = tk.OptionMenu(marking_frame, kv_manager.current_col, *colors)
+        option_menu = KVColorsMenu(marking_frame)
         option_menu.pack(fill="x", pady=0)
-
-        def set_strVar(var: tk.StringVar, val: str) -> Callable[[], None]:
-            return lambda: var.set(val)
-        def update_options():
-            menu: tk.Menu = option_menu["menu"]
-            menu.delete(0, "end")
-            for opt in DYNAMIC.Colors.keys():
-                menu.add_command(label=opt, command=set_strVar(kv_manager.current_col, opt))
-            kv_manager.update_markings()
-        kv_input_handler.link_marking_color(kv_manager.current_col)
-        ROOT.bind("<<ColorsChanged>>", lambda _: update_options())
+        kv_manager.link_marking_color(option_menu)
+        ROOT.bind("<<ColorsChanged>>", kv_manager.on_colors_changed)
 
         next_prev_frame = tk.Frame(marking_frame)
         next_prev_frame.rowconfigure(0, weight=1)
@@ -111,9 +101,9 @@ def build_ui():
 
     build_menubar()
 
-    kv_manager, input_handler = build_KV_Diagram()
+    kv_manager = build_KV_Diagram()
 
-    build_sidebar(kv_manager, input_handler)  # Call the function to update the map
+    build_sidebar(kv_manager)  # Call the function to update the map
 
 if __name__ == "__main__":
     load_config()

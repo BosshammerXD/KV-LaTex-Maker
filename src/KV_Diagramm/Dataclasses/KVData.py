@@ -1,5 +1,5 @@
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterator
 
 from Globals import DYNAMIC
 
@@ -24,7 +24,7 @@ class KVData:
         self._selected = val
         self.__adjust_selected()
     @property
-    def markings(self) -> Iterator[Marking]:
+    def markings(self) -> Iterable[Marking]:
         return iter(self._markings)
     @property
     def len_markings(self) -> int:
