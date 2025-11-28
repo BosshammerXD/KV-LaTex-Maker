@@ -21,10 +21,11 @@ def build_menubar():
 #
 #
 #region KV Diagram
-def build_KV_Diagram() -> KVManager:
+def build_KV_Diagram() -> tuple[KVManager, KVInputHandler]:
     canvas = tk.Canvas(ROOT, bg=BG_COLOR)
     canvas.grid(row=0, column=0, sticky="nsew")
-    return KVManager(canvas)
+    kv_manager = KVManager(canvas)
+    return kv_manager, KVInputHandler(canvas, kv_manager)
 #endregion
 #
 #
@@ -110,9 +111,9 @@ def build_ui():
 
     build_menubar()
 
-    kv_manager = build_KV_Diagram()
+    kv_manager, input_handler = build_KV_Diagram()
 
-    build_sidebar(kv_manager, kv_manager.input_handler)  # Call the function to update the map
+    build_sidebar(kv_manager, input_handler)  # Call the function to update the map
 
 if __name__ == "__main__":
     load_config()

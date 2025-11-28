@@ -2,36 +2,30 @@ from collections.abc import Callable
 from tkinter import Canvas, Event, StringVar
 
 from . import KVUtils
-from .KVData import Marking
-
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .KVManager import KVManager
+from .KVManager import KVManager
 
 class KVInputHandler:
-    def __init__(self, canvas: Canvas, kv_manager: KVManager, current_marking_getter: Callable[[], Marking]) -> None:
-        self.resize_scheduled: bool = False
+    def __init__(self, canvas: Canvas, kv_manager: KVManager) -> None:
+        self.resize_id: str = ""
         canvas.bind("<Configure>", self.__get_on_resize(canvas))
-        canvas.bind("<Button-1>", self.__get_on_left_click(current_marking_getter))
-        canvas.bind("<Button-3>", self.__get_on_right_click(current_marking_getter))
+        canvas.bind("<Button-1>", self.__get_on_left_click())
+        canvas.bind("<Button-3>", self.__get_on_right_click())
         self.kv_manager = kv_manager
     
     def __get_on_resize(self, canvas: Canvas) -> Callable[[Event], None]:
         def update_sizes():
-            self.resize_scheduled = False
             self.kv_manager.update_sizes(canvas.winfo_width(), canvas.winfo_height())
         def on_resize(event: Event) -> None:
-            if not self.resize_scheduled:
-                #schedule resize
-                canvas.after(10, update_sizes)
-                self.resize_scheduled = True
+            if self.resize_id:
+                canvas.after_cancel(self.resize_id)
+            self.resize_id = canvas.after(100, update_sizes)
         return on_resize
     
-    def __get_on_left_click(self, current_marking_getter: Callable[[], Marking]) -> Callable[[Event], None]:
+    def __get_on_left_click(self) -> Callable[[Event], None]:
         def on_left_click(event: Event) -> None:
             if (index := self.kv_manager.event_to_kv_index(event)) == -1:
                 return
-            current_indices = current_marking_getter().indices
+            current_indices = self.kv_manager.get_selected_marking().indices
             if len(current_indices) == 0:
                 current_indices.append(index)
             elif (different_bit := KVUtils.get_different_bit(index, current_indices)) is not None:    
@@ -41,9 +35,9 @@ class KVInputHandler:
             self.kv_manager.update_selected_marking()
         return on_left_click
     
-    def __get_on_right_click(self, current_marking_getter: Callable[[], Marking]) -> Callable[[Event], None]:
+    def __get_on_right_click(self) -> Callable[[Event], None]:
         def on_right_click(event: Event) -> None:
-            current_marking = current_marking_getter()
+            current_marking = self.kv_manager.get_selected_marking()
             current_indices = current_marking.indices
             if len(current_indices) == 0:
                 return

@@ -1,52 +1,10 @@
-from enum import IntFlag
 from dataclasses import dataclass, field
 from typing import Iterator
 
 from Globals import DYNAMIC
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from Shapes.KVMarkings import KVMarkings
-
-class Edge(IntFlag):
-    NONE = 0
-    RIGHT = 1
-    LEFT = 2
-    TOP = 4
-    BOTTOM = 8
-
-    def kv_str(self) -> str:
-        ret: str = ""
-        if Edge.RIGHT in self and Edge.LEFT not in self:
-            ret += "r"
-        if Edge.LEFT in self and Edge.RIGHT not in self:
-            ret += "l"
-        if Edge.TOP in self and Edge.BOTTOM not in self:
-            ret += "t"
-        if Edge.BOTTOM in self and Edge.TOP not in self:
-            ret += "b"
-        return ret
-EDGES: tuple[Edge, Edge, Edge, Edge] = (Edge.LEFT, Edge.RIGHT, Edge.TOP, Edge.BOTTOM)
-
-@dataclass
-class MarkingData:
-    x1: float
-    y1: float
-    x2: float
-    y2: float
-    edges: Edge
-
-
-@dataclass
-class Marking:
-    latex_color: str
-    tkinter_color: str
-    _TAG: str
-    indices: list[int] =  field(default_factory=lambda: list[int]())
-    drawables: list[MarkingData] = field(default_factory=lambda: [])
-    @property
-    def TAG(self) -> str:
-        return self._TAG
+from .Marking import Marking
+from Shapes.KVMarkings import KVMarkings
 
 @dataclass
 class KVData:
@@ -74,7 +32,7 @@ class KVData:
         return len(self._markings)
 
     def add_marking(self, latex_color: str, tag: str, index: int = -1) -> None:
-        marking = Marking(latex_color, DYNAMIC.Colors[latex_color], tag)
+        marking = Marking(latex_color, tag)
         if index < 0:
             self._markings.append(marking)
             self._kv_markings.new_marking(self.len_markings - 1, marking)
@@ -102,3 +60,6 @@ class KVData:
     
     def get_selected_marking(self) -> Marking:
         return self._markings[self.selected]
+    
+    def update_colors(self):
+        [self.remove_marking(i) for i, m in enumerate(self._markings) if m.latex_color not in DYNAMIC.Colors]

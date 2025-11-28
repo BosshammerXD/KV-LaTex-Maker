@@ -1,5 +1,5 @@
-from .KVData import Edge, KVData
-
+from .Dataclasses.KVData import KVData
+from .Dataclasses.Edge import Edge
 
 KARNAUGH_TEMPLATE: str = """
 \\karnaughmap{{{num_vars}}}{{{title}}}%
