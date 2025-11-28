@@ -9,8 +9,8 @@ from Shapes.KVMarkings import KVMarkings
 @dataclass
 class KVData:
     _kv_markings: KVMarkings
-    vals: str
-    vars: list[str]
+    vals: str = ""
+    vars: list[str] = field(default_factory=lambda: [])
     _selected: int = -1
     width: int = 0
     height: int = 0
@@ -23,7 +23,6 @@ class KVData:
     def selected(self, val: int) -> None:
         self._selected = val
         self.__adjust_selected()
-        self._kv_markings.update_selected(self._selected)
     @property
     def markings(self) -> Iterator[Marking]:
         return iter(self._markings)
@@ -35,14 +34,14 @@ class KVData:
         marking = Marking(latex_color, tag)
         if index < 0:
             self._markings.append(marking)
-            self._kv_markings.new_marking(self.len_markings - 1, marking)
+            self._kv_markings.new_marking(marking)
         else:
             self._markings.insert(index, marking)
-            self._kv_markings.new_marking(index, marking)
+            self._kv_markings.new_marking(marking)
 
     def remove_marking(self, index: int):
         marking = self._markings.pop(index)
-        self._kv_markings.delete_marking(index, marking.TAG)
+        self._kv_markings.delete_marking(marking.TAG)
         self.__adjust_selected()
 
     def __adjust_selected(self) -> None:
@@ -53,7 +52,7 @@ class KVData:
                 self._selected += len(self._markings)
             while self._selected >= len(self._markings):
                 self._selected -= len(self._markings)
-        self._kv_markings.update_selected(self._selected)
+        self._kv_markings.update_selected(self.get_selected_marking())
 
     def get_num_vars(self) -> int:
         return len(self.vars)

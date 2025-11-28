@@ -28,21 +28,22 @@ def get_different_bit(index: int, others: list[int]) -> Optional[int]:
     assert(ret.bit_count() == 1)
     return ret.bit_length() - 1
 
-def make_blocks(indices: list[int]) -> list[list[int]]:
+def make_blocks(indices: list[int]) -> list[list[tuple[int, int]]]:
     #modified Flood Fill Algorithm
-    coord_to_indices: dict[tuple[int, int], int] = {IndexToCoordinate(i) : i for i in indices} 
-    islands: list[list[int]] = []
-    while coord_to_indices:
-        item: tuple[tuple[int, int], int] = coord_to_indices.popitem()
-        island: list[int] = [item[1]]
-        queue: deque[tuple[int, int]] = deque([item[0]])
+    coords: set[tuple[int, int]] = {IndexToCoordinate(i) for i in indices}
+    islands: list[list[tuple[int, int]]] = []
+    while coords:
+        item: tuple[int, int] = coords.pop()
+        queue: deque[tuple[int, int]] = deque([item])
+        island: list[tuple[int, int]] = []
         while queue:
             p: tuple[int, int] = queue.popleft()
+            island.append(p)
             for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
                 neighbour: tuple[int, int] = (p[0] + dx, p[1] + dy)
-                if neighbour in coord_to_indices:
+                if neighbour in coords:
+                    coords.remove(neighbour)
                     queue.append(neighbour)
-                    island.append(coord_to_indices.pop(neighbour))
         islands.append(island)
     return islands
 

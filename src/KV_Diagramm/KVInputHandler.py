@@ -14,7 +14,7 @@ class KVInputHandler:
     
     def __get_on_resize(self, canvas: Canvas) -> Callable[[Event], None]:
         def update_sizes():
-            self.kv_manager.update_sizes(canvas.winfo_width(), canvas.winfo_height())
+            self.kv_manager.update(new_dim=(canvas.winfo_width(), canvas.winfo_height()))
         def on_resize(event: Event) -> None:
             if self.resize_id:
                 canvas.after_cancel(self.resize_id)
@@ -41,23 +41,24 @@ class KVInputHandler:
             current_indices = current_marking.indices
             if len(current_indices) == 0:
                 return
-            if len(current_indices) == 1:
-                self.kv_manager.remove_selected_marking()
-                return
-            if (index := self.kv_manager.event_to_kv_index(event)) in current_indices:
+            elif len(current_indices) == 1:
+                self.kv_manager.clear_marking(current_marking)
+            elif (index := self.kv_manager.event_to_kv_index(event)) in current_indices:
                 KVUtils.shrink_block(current_indices, index)
                 self.kv_manager.update_selected_marking()
         return on_right_click
     
     def link_vals(self, vals: StringVar) -> None:
         def vals_changed() -> None:
-            self.kv_manager.update_vals(vals.get())
+            self.kv_manager.update(new_values=vals.get())
         vals.trace_add('write', lambda name, index, mode: vals_changed())
+        vals_changed()
     
     def link_vars(self, vars: StringVar) -> None:
         def vars_changed() -> None:
-            self.kv_manager.update_vars(vars.get().split(","))
+            self.kv_manager.update(new_vars=vars.get().split(","))
         vars.trace_add('write', lambda name, index, mode: vars_changed())
+        vars_changed()
     
     def link_marking_color(self, marking_color: StringVar) -> None:
         def marking_color_changed() -> None:

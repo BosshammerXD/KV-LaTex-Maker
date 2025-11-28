@@ -1,4 +1,3 @@
-from collections.abc import Iterator
 from tkinter import Canvas
 
 import IterTools
@@ -13,39 +12,32 @@ class KVMarkings(KVDrawable):
     __THICK_WIDTH: int = 4
     def __init__(self, canvas: Canvas) -> None:
         super().__init__(canvas)
-        self.__selected: int = -1
         self.__marking_ids: dict[str, list[Edge_Lines]] = {}
-        self.__marking_tags: list[str] = []
+        self.__selected_tag: str = ""
 
     def set_color(self, tag: str, col: str) -> None:
         self._canvas.itemconfig(tag, fill=col)
 
-    def update_selected(self, selected: int):
-        if selected < 0:
-            self.__selected = -1
-        elif selected != self.__selected:
-            assert(len(self.__marking_ids) > selected)
-            if self.__selected != -1:  
-                self._canvas.itemconfig(self.__marking_tags[self.__selected], width=self.__SLIM_WIDTH)
-            self._canvas.itemconfig(self.__marking_tags[selected], width=self.__THICK_WIDTH)
-            self.__selected = selected
+    def update_selected(self, selected: Marking):
+        if self.__selected_tag:
+            self._canvas.itemconfig(self.__selected_tag, width=self.__SLIM_WIDTH)
+        self.__selected_tag = selected .TAG
+        self._canvas.itemconfig(selected.TAG, width=self.__THICK_WIDTH)
 
-    def delete_marking(self, index: int, tag: str):
+    def delete_marking(self, tag: str):
         self._canvas.delete(tag)
-        if index != self.__selected:
-            self.__marking_ids.pop(tag)
-            self.__marking_tags.pop(index)
-        elif self.__selected < 0:
+        if tag == self.__selected_tag:
             for edge_line in self.__marking_ids[tag]:
                 edge_line.reset()
+        else:
+            self.__marking_ids.pop(tag)
 
-    def new_marking(self, index: int, marking: Marking) -> None:
+    def new_marking(self, marking: Marking) -> None:
         self.__marking_ids[marking.TAG] = [Edge_Lines() for _ in range(len(marking.drawables))]
-        self.__marking_tags.insert(index, marking.TAG)
-        self.update_marking(index, marking)
+        self.update_marking(marking)
 
-    def update_marking(self, index: int, marking: Marking) -> None:
-        assert(len(self.__marking_ids) > index)
+    def update_marking(self, marking: Marking) -> None:
+        assert(marking.TAG in self.__marking_ids)
         edge_lines = self.__marking_ids[marking.TAG]
         if marking.drawables:
             IterTools.ensure_count(edge_lines, len(marking.drawables), lambda _: Edge_Lines(), lambda x: x.delete(self._canvas))
@@ -53,16 +45,7 @@ class KVMarkings(KVDrawable):
             self._canvas.delete(marking.TAG)
             self.__marking_ids[marking.TAG] = []
         for markingdata, edge_line in zip(marking.drawables, edge_lines):
-            self.__set_lines(markingdata.edges, edge_line, marking.tkinter_color, marking.TAG, index == self.__selected)
-
-    def update(self, markings: list[Marking]):
-        for index, marking in enumerate(markings):
-            self.update_marking(index, marking)
-
-
-    def draw(self, kv_grid: KVGrid, markings: Iterator[Marking]) -> None:
-        for marking in filter(lambda m: len(m.indices), markings):
-            self.draw_marking(kv_grid, marking)
+            self.__set_lines(markingdata.edges, edge_line, marking.tkinter_color, marking.TAG, marking.TAG == self.__selected_tag)
     
     def draw_marking(self, kv_grid: KVGrid, marking: Marking) -> None:
         marking_offset: float = 0.05

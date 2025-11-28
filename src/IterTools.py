@@ -1,6 +1,7 @@
 from collections import deque
 from collections.abc import Callable, Iterator
 from itertools import cycle
+from typing import Optional
 
 class IDGenerator[T]:
     """
@@ -51,6 +52,17 @@ class CyclicCache[T]:
         self.__released_items: deque[T] = deque()
         self.__in_use_items: set[T] = set()
     
+    def change_generator(self, generator: Iterator[T], start: Optional[T] = None) -> None:
+        if start is None:
+            self.__generator = cycle(generator)
+        else:
+            items: deque[T] = deque(generator)
+            while items[0] != start:
+                items.rotate(-1)
+            self.__generator = cycle(items)
+        self.__released_items.clear()
+        self.__in_use_items.clear()
+
     def get_item(self) -> T:
         if self.__released_items:
             item = self.__released_items.popleft()
