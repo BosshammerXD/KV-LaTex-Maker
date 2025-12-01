@@ -26,7 +26,7 @@ class KVValues(KVDrawableFromGrid):
     
     def __resize_val_ids(self, new_values: str) -> None:
         def factory(i: int) -> int:
-            return self.__make_text(new_values[len(self.__values) + i])
+            return self.__make_text(new_values[i])
         IterTools.ensure_count(self.__val_ids, len(new_values), factory, self._delete_item)
     
     def __update_text_contents(self, new_values: str) -> None:
