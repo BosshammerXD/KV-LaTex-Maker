@@ -1,3 +1,4 @@
+import math
 from collections.abc import Callable
 from typing import Optional
 
@@ -116,5 +117,4 @@ class CompleteTree[T]:
         else:
             # Calculate height: find minimum h such that 2^h - 1 >= len(nodes)
             # Equivalent to: h = ceil(log2(len(nodes) + 1))
-            import math
             self.__height = math.ceil(math.log2(len(self.__nodes) + 1))
