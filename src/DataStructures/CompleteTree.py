@@ -72,8 +72,8 @@ class CompleteTree[T]:
         Args:
             deleter: Optional callback to clean up each deleted node
         """
-        if self.__height <= 1:
-            # If height is 0 (empty) or 1 (only root), nothing to delete
+        # If tree is empty or has 2 or fewer nodes (root and possibly only left child), nothing to delete
+        if self.__height == 0 or len(self.__nodes) <= 2:
             return
         
         # In a complete binary tree stored as [root, left, right, ...]:
@@ -95,8 +95,7 @@ class CompleteTree[T]:
             collect_subtree(2 * root_idx + 2)
         
         # Collect all nodes in the left subtree (rooted at index 1)
-        if len(self.__nodes) > 1:
-            collect_subtree(1)
+        collect_subtree(1)
         
         # Build new nodes list and delete nodes not in the kept set
         new_nodes: list[T] = []
@@ -106,32 +105,16 @@ class CompleteTree[T]:
             elif deleter is not None:
                 deleter(node)
         
-        # Now we need to rebuild the tree structure to be a proper complete binary tree
-        # The nodes we kept represent a subtree, but they're not in the right order for our storage
-        # We need to perform a level-order traversal and repack them
-        
-        # Actually, the indices we kept [0, 1, 3, 4, 7, 8, 9, 10, ...] need to be remapped
-        # to [0, 1, 2, 3, 4, 5, 6, 7, ...] maintaining the tree structure
-        
-        # Create a mapping from old index to new index
-        sorted_indices = sorted(indices_to_keep)
-        index_map = {old_idx: new_idx for new_idx, old_idx in enumerate(sorted_indices)}
-        
-        # Rebuild with proper ordering
+        # Update with new nodes
         self.__nodes = new_nodes
-        
-        # Recalculate height: we kept the left subtree which has the same height as original
-        # The left subtree of a complete binary tree of height h also has height h
-        # So height remains the same
-        # Actually no - we now have fewer total nodes, so height might be different
         
         # Calculate new height based on number of nodes
         # A complete binary tree with height h has between 2^(h-1) and 2^h - 1 nodes
+        # Use logarithmic calculation: h = ceil(log2(n + 1))
         if len(self.__nodes) == 0:
             self.__height = 0
         else:
-            # Find minimum h such that 2^h - 1 >= len(self.__nodes)
-            h = 0
-            while (2 ** h - 1) < len(self.__nodes):
-                h += 1
-            self.__height = h
+            # Calculate height: find minimum h such that 2^h - 1 >= len(nodes)
+            # Equivalent to: h = ceil(log2(len(nodes) + 1))
+            import math
+            self.__height = math.ceil(math.log2(len(self.__nodes) + 1))
