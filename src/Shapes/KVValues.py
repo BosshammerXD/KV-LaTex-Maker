@@ -7,27 +7,29 @@ import IterTools
 import tkinter.font as tkfont
 
 from .KVGrid import KVGrid
-from .KVDrawableFromGrid import KVDrawableFromGrid
+from .KVDrawable import KVDrawable
 
-class KVValues(KVDrawableFromGrid):
-    def __init__(self, canvas: Canvas, new_values: str = "") -> None:
+class KVValues(KVDrawable):
+    def __init__(self, canvas: Canvas) -> None:
         super().__init__(canvas)
         self.__font = tkfont.Font(family=FONTS.TYPE, size=12)
         self.__values: str = ""
         self.__val_ids: list[int] = []
-        self.update(new_values)
     
-    def update(self, new_values: str) -> None:
+    def update(self, new_values: str, max_num_values: int) -> None:
         if new_values == self.__values:
             return
-        self.__resize_val_ids(new_values)
-        self.__update_text_contents(new_values)
-        self.__values = new_values
+        if new_values == "":
+            self.__resize_val_ids(self.__values, max_num_values)
+        else:
+            self.__resize_val_ids(new_values, max_num_values)
+            self.__update_text_contents(new_values)
+            self.__values = new_values
     
-    def __resize_val_ids(self, new_values: str) -> None:
+    def __resize_val_ids(self, new_values: str, max_num_values: int) -> None:
         def factory(i: int) -> int:
             return self.__make_text(new_values[i])
-        IterTools.ensure_count(self.__val_ids, len(new_values), factory, self._delete_item)
+        IterTools.ensure_count(self.__val_ids, min(len(new_values), max_num_values), factory, self._delete_item)
     
     def __update_text_contents(self, new_values: str) -> None:
         def update_text_at_index(index: int) -> None:

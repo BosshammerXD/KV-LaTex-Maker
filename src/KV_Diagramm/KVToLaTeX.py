@@ -29,8 +29,6 @@ def get_kv_string(kvdata: KVData, title: str) -> str:
     """
     retval = KARNAUGH_TEMPLATE
 
-    # TODO: Generator for markings
-
     ovals: list[str] = []
     oval: list[str] = []
 

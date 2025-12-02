@@ -2,13 +2,13 @@ from KV_Diagramm import KVUtils
 from Globals.STATIC import FONTS
 from tkinter import Canvas
 
-from .KVDrawableFromGrid import KVDrawableFromGrid
+from .KVDrawable import KVDrawable
 from .KVGrid import KVGrid
 
 import IterTools
 import tkinter.font as tkfont
 
-class KVIndices(KVDrawableFromGrid):
+class KVIndices(KVDrawable):
     def __init__(self, canvas: Canvas) -> None:
         super().__init__(canvas)
         self.__font = tkfont.Font(family=FONTS.TYPE)

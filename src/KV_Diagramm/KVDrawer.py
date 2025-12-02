@@ -61,8 +61,8 @@ class KVDrawer:
             self.__kv_grid.update(kv_data.width, kv_data.height)
             self.__kv_indices.update(2**kv_data.get_num_vars())
             self.draw_flags |= KVFlags.ALL
-        if new_values:
-            self.__kv_values.update(new_values)
+        if new_values or KVFlags.VARS in self.draw_flags:
+            self.__kv_values.update(new_values, 2**len(self.__kv_vars))
             self.draw_flags |= KVFlags.VALS
         if changed_markings:
             [self.__kv_markings.update_marking(m) for m in changed_markings]
