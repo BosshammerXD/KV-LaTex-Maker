@@ -1,8 +1,7 @@
 from __future__ import annotations
-from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field
-from typing import Callable, Optional
-from DataStructures.CompleteTree import CompleteTree
+from collections.abc import Callable
+from DataStructures.KVVarIDs import KVVarIDs, LineTextPair
+from GeneralDataTypes.IDiedString import IDiedString
 from Globals.STATIC import FONTS
 from tkinter import Canvas
 
@@ -11,131 +10,92 @@ import tkinter.font as tkfont
 from .KVDrawable import KVDrawable
 from .KVGrid import KVGrid
 
-@dataclass
-class _LineTextPair:
-    line_id: int
-    text_id: int
+class _LayerLayout:
+    def __init__(self, layer_index: int, kv_grid: KVGrid, is_left: bool) -> None:
+        depth = (kv_grid.x_offset if is_left else kv_grid.y_offset) - layer_index * kv_grid.cell_size / 2
+        self.line_length: int = 2**(layer_index + 1) * kv_grid.cell_size
+        self.grid_start: float = (kv_grid.y_offset if is_left else kv_grid.x_offset) + self.line_length / 2
+        self.grid_offset: float = depth - 0.1 * kv_grid.cell_size
+        self.text_offset: float = depth - 0.25 * kv_grid.cell_size
 
-    def delete(self, canvas: Canvas):
-        canvas.delete(self.line_id, self.text_id)
+class _Line:
+    def __init__(self, segment_index: int, layout: _LayerLayout) -> None:
+        self.layout: _LayerLayout = layout
+        self.start: float = layout.grid_start + 2 * segment_index * layout.line_length
+        self.end: float = self.start + layout.line_length
     
-    def __iter__(self) -> Iterator[int]:
-        yield self.line_id
-        yield self.text_id
-
-@dataclass
-class _KVVarIDs:
-    _val: Optional[_LineTextPair] = None
-    _tree: CompleteTree[_LineTextPair] = field(default_factory=lambda:CompleteTree())
-
     @property
-    def val(self) -> Optional[_LineTextPair]:
-        return self._val
-
-    @property
-    def num_vars(self) -> int:
-        if self._val is None:
-            return 0
-        else:
-            return self._tree.height + 1
-
-    def add_var(self, factory: Callable[[],_LineTextPair]):
-        if self._val is None:
-            self._val = factory()
-        else:
-            self._tree.add_layer(factory)
-    
-    def remove_var(self, canvas: Canvas) -> None:
-        if self._val is None:
-            return
-        if self._tree.height != 0:
-            self._tree.remove_layer(lambda x: x.delete(canvas))
-        else:
-            self._val.delete(canvas)
-            self._val = None
-    
-    def resize(self, new_vars: Iterable[str], factory: Callable[[str],_LineTextPair], canvas: Canvas) -> None:
-        new_vars_iter = iter(new_vars)
-        try:
-            first = next(new_vars_iter)
-            if self._val is None:
-                self._val = factory(first)
-            vars = list(new_vars_iter)
-            if not vars:
-                self._tree.clear()
-            else:
-                self._tree.resize(len(vars), lambda i: factory(vars[i]), lambda x: x.delete(canvas))
-        except StopIteration:
-            self._val = None
-    
-    def __iter__(self) -> Iterator[list[_LineTextPair]]:
-        return reversed(self._tree.get_layers())
-    
-    def delete(self, canvas: Canvas):
-        while self._val is not None:
-            self.remove_var(canvas)
-
-#TODO: make algorithm smarter by
-#      - only changing the vars that need to be changed when the line stays same but vals differ
-#      - in case of more vals make the old ones longer instead of elting everything and regenerating it again
-#      - in case of less vals only delete the ones that need to be deleted and modify the new highest one so the bar length fits
+    def middle(self) -> float:
+        return (self.start + self.end) / 2
 
 class KVVars(KVDrawable):
+    __VAR_TEXT_TAG: str = "KVVar"
+
     def __init__(self, canvas: Canvas) -> None:
         super().__init__(canvas)
         self.__font = tkfont.Font(family=FONTS.TYPE, size=12)
-        self.__vars: list[str] = []
-        self.__top_var_ids: _KVVarIDs = _KVVarIDs()
-        self.__left_var_ids: _KVVarIDs = _KVVarIDs()
+        self.__vars: list[str | IDiedString] = []
+        self.__top_var_ids: KVVarIDs = KVVarIDs(self.__make_LineTextID_from_index(False), canvas)
+        self.__left_var_ids: KVVarIDs = KVVarIDs(self.__make_LineTextID_from_index(True), canvas)
 
     def update(self, vars: list[str]) -> None:
         if vars == self.__vars:
             return
-        self.__vars = vars.copy()
-        top_vars = vars[::2]
-        left_vars = vars[1::2]
-        self.__top_var_ids.resize(reversed(top_vars), self.__make_LineTextID(False), self._canvas)
-        self.__left_var_ids.resize(reversed(left_vars), self.__make_LineTextID(True), self._canvas)
+        if len(vars) > len(self.__vars):
+            self.__vars.extend(vars[len(self.__vars)::])
+        elif len(vars) < len(self.__vars):
+            [e.__del__() for _ in range(len(self.__vars) - len(vars)) if isinstance(e := self.__vars.pop(), IDiedString)]
+        [self.__update_tree_layer(v_o, v_n) for (v_n, v_o) in zip(vars, self.__vars) if v_n != v_o]
+        num_left_vars: int = len(vars) // 2
+        num_top_vars: int = len(vars) - num_left_vars
+        self.__top_var_ids.resize(num_top_vars)
+        self.__left_var_ids.resize(num_left_vars)
+
+
+    def __update_tree_layer(self, old_val: IDiedString | str, new_val: str) -> None:
+        if isinstance(old_val, str): return
+        old_val.val = new_val
+        self._canvas.itemconfig(f"{KVVars.__VAR_TEXT_TAG}{old_val.id}", text=new_val)
+
 
     def draw(self, kv_grid: KVGrid) -> None:
         cell_size = kv_grid.cell_size
         self.__font.configure(size=int(cell_size//4))
+        self.__draw_layers(kv_grid, False)
+        self.__draw_layers(kv_grid, True)
 
-        for index, layer in enumerate(self.__top_var_ids):
-            self.__draw_layer(layer, index, cell_size, (kv_grid.x_offset, kv_grid.y_offset), False, False)
-        if (val := self.__top_var_ids.val) is not None:
-            self.__draw_layer([val], self.__top_var_ids.num_vars - 1, cell_size, (kv_grid.x_offset, kv_grid.y_offset), False, True)
-        for index, layer in enumerate(self.__left_var_ids):
-            self.__draw_layer(layer, index, cell_size, (kv_grid.x_offset, kv_grid.y_offset), True, False)
-        if (val := self.__left_var_ids.val) is not None:
-            self.__draw_layer([val], self.__left_var_ids.num_vars - 1, cell_size, (kv_grid.x_offset, kv_grid.y_offset), True, True)
-
-    def __draw_layer(self, layer: list[_LineTextPair], index: int, cell_size: float, tl_grid: tuple[float, float], is_left: bool, is_root: bool) -> None:
-        line_length: float = 2**(index + 1) * cell_size
-        start: float = tl_grid[1 if is_left else 0] + line_length / 2
-        depth: float = tl_grid[0 if is_left else 1] - index * cell_size / 2
-        text_offset = 0.25 * cell_size
-        offset_from_grid = 0.1 * cell_size
-        for i, (line, text) in enumerate(layer):
-            v1 = start + 2 * i * line_length
-            v2 = v1 + line_length
-            if is_root:
-                v2 -= line_length / 2
-            if is_left:
-                self._canvas.coords(line, depth - offset_from_grid, v1, depth - offset_from_grid, v2)
-                self._canvas.coords(text, depth - text_offset, (v1 + v2) / 2)
-            else:
-                self._canvas.coords(line, v1, depth - offset_from_grid, v2, depth - offset_from_grid)
-                self._canvas.coords(text, (v1 + v2) / 2, depth - text_offset)
+    def __move_left_text_line(self, line_id: int, text_id: int, coords: _Line) -> None:
+        self._canvas.coords(line_id, coords.layout.grid_offset, coords.start, coords.layout.grid_offset, coords.end)
+        self._canvas.coords(text_id, coords.layout.text_offset, coords.middle)
     
-    def __make_LineTextID(self, is_left: bool) -> Callable[[str], _LineTextPair]:
+    def __move_top_text_line(self, line_id: int, text_id: int, coords: _Line) -> None:
+        self._canvas.coords(line_id, coords.start, coords.layout.grid_offset, coords.end, coords.layout.grid_offset)
+        self._canvas.coords(text_id, coords.middle, coords.layout.text_offset)
+
+    def __draw_layers(self, kv_grid: KVGrid, is_left: bool):
+        layers = self.__left_var_ids if is_left else self.__top_var_ids
+        move_func = self.__move_left_text_line if is_left else self.__move_top_text_line
+        for index, layer in enumerate(layers):
+            layout = _LayerLayout(index, kv_grid, is_left)
+            [move_func(line_id, text_id, _Line(i, layout)) for i, (line_id, text_id) in enumerate(layer)]
+        if layers.val is not None:
+            layout = _LayerLayout(layers.num_vars - 1, kv_grid, is_left)
+            coords = _Line(0, layout)
+            coords.end -= layout.line_length / 2
+            move_func(layers.val.line_id, layers.val.text_id, coords)
+
+    def __make_LineTextID_from_index(self, is_left: bool) -> Callable[[int], LineTextPair]:
         angle = 90 if is_left else 0
-        def ret_func(var: str):
-            return _LineTextPair(
+        def ret_func(index: int):
+            string = self.__vars[int(is_left) + 2 * index]
+            if isinstance(string, str):
+                text = IDiedString(string)
+                self.__vars[int(is_left) + 2 * index] = text
+            else:
+                text = string
+            return LineTextPair(
                 self._canvas.create_line(0,0,0,0, width=2),
-                self._canvas.create_text(0,0, text=var, angle=angle, font=self.__font)
+                self._canvas.create_text(0,0, text=text.val, angle=angle, font=self.__font, tags=(f"{KVVars.__VAR_TEXT_TAG}{text.id}",)),
+                text.id
             )
         return ret_func
-
-    def __len__(self) -> int:
-        return len(self.__vars)

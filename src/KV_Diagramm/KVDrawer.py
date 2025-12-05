@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from enum import IntFlag, Enum
+from enum import IntFlag
 from tkinter import Canvas
 
 from KV_Diagramm.Dataclasses.KVData import KVData
@@ -19,10 +19,10 @@ class KVFlags(IntFlag):
     IDXS = 8
     ALL = 15
 
-class GridUpdateMode(Enum):
+class GridUpdateMode(IntFlag):
     NONE = 0
     UPDATE = 1
-    NEW_DIM_UPDATE = 2
+    NEW_DIM_UPDATE = 3
 
 class KVDrawer:
     def __init__(self, canvas: Canvas, kv_markings: KVMarkings) -> None:
@@ -50,21 +50,21 @@ class KVDrawer:
             [self.__kv_markings.draw_marking(self.__kv_grid, m) for m in markings]
         self.draw_flags = KVFlags.NONE
     
-    def update(self, kv_data: KVData, new_vars: list[str] = [], new_values: str = "", changed_markings: list[Marking] = [], draw_grid: GridUpdateMode = GridUpdateMode.NONE) -> None:
-        if new_vars:
+    def update(self, kv_data: KVData, new_vars: list[str] | None = None, new_values: str | None = None, changed_markings: list[Marking] | None = None, draw_grid: GridUpdateMode = GridUpdateMode.NONE) -> None:
+        if new_vars is not None:
             self.__kv_vars.update(new_vars)
             self.draw_flags |= KVFlags.VARS
-        if draw_grid == GridUpdateMode.NEW_DIM_UPDATE:
+        if GridUpdateMode.NEW_DIM_UPDATE in draw_grid:
             self.__width = self.__canvas.winfo_width()
             self.__height = self.__canvas.winfo_height()
-        if draw_grid:
+        if GridUpdateMode.UPDATE in draw_grid:
             self.__kv_grid.update(kv_data.width, kv_data.height)
             self.__kv_indices.update(2**kv_data.get_num_vars())
             self.draw_flags |= KVFlags.ALL
-        if new_values or KVFlags.VARS in self.draw_flags:
-            self.__kv_values.update(new_values, 2**len(self.__kv_vars))
+        if new_values is not None or KVFlags.VARS in self.draw_flags:
+            self.__kv_values.update(new_values, kv_data.width * kv_data.height)
             self.draw_flags |= KVFlags.VALS
-        if changed_markings:
+        if changed_markings is not None:
             [self.__kv_markings.update_marking(m) for m in changed_markings]
             self.draw(changed_markings)
         else:

@@ -16,10 +16,10 @@ class KVValues(KVDrawable):
         self.__values: str = ""
         self.__val_ids: list[int] = []
     
-    def update(self, new_values: str, max_num_values: int) -> None:
+    def update(self, new_values: str | None, max_num_values: int) -> None:
         if new_values == self.__values:
             return
-        if new_values == "":
+        if new_values is None:
             self.__resize_val_ids(self.__values, max_num_values)
         else:
             self.__resize_val_ids(new_values, max_num_values)
@@ -32,10 +32,9 @@ class KVValues(KVDrawable):
         IterTools.ensure_count(self.__val_ids, min(len(new_values), max_num_values), factory, self._delete_item)
     
     def __update_text_contents(self, new_values: str) -> None:
-        def update_text_at_index(index: int) -> None:
-            self._canvas.itemconfig(self.__val_ids[index], text=new_values[index])
-        smallest_len = min(len(new_values), len(self.__values))
-        [update_text_at_index(i) for i in range(smallest_len) if new_values[i] != self.__values[i]]
+        def update_text_at_index(index: int, new_value: str) -> None:
+            self._canvas.itemconfig(self.__val_ids[index], text=new_value)
+        [update_text_at_index(i, n_v) for i, (n_v, o_v) in enumerate(zip(new_values, self.__values)) if n_v != o_v]
 
     def draw(self, kv_grid: KVGrid):
         self.__font.configure(size=int(kv_grid.cell_size // 2))
