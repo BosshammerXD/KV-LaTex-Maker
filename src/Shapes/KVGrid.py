@@ -26,20 +26,20 @@ class KVGrid(KVDrawable):
 
     def update(self, num_cols: int, num_rows: int) -> None:
         #how many vars need to fit to the left (analog to int(math.log(num_rows, 2))) (only need since thy take up half a cell)
-        self.x_offset_cells: int = num_rows.bit_length() // 2 
+        self.__x_offset_cells: int = num_rows.bit_length() // 2 
         #how many vars need to fit above
-        self.y_offset_cells: int = num_cols.bit_length() // 2 
+        self.__y_offset_cells: int = num_cols.bit_length() // 2 
         IterTools.ensure_count(self.__row_ids, num_rows - 1, self.__make_line, self._delete_item)
         IterTools.ensure_count(self.__col_ids, num_cols - 1, self.__make_line, self._delete_item)
 
     def draw(self, canvas_width: float, canvas_height: float) -> None:
-        x_total: float = self.x_offset_cells + len(self.__col_ids) + 2
-        y_total: float = self.y_offset_cells + len(self.__row_ids) + 2
+        x_total: float = self.__x_offset_cells + len(self.__col_ids) + 2
+        y_total: float = self.__y_offset_cells + len(self.__row_ids) + 2
         self.__cell_size = min(canvas_width / x_total, canvas_height / y_total)
         width: float = self.__cell_size * (len(self.__col_ids) + 1)
         height: float = self.__cell_size * (len(self.__row_ids) + 1)
-        self.__x_offset = max(self.x_offset_cells * self.__cell_size, (canvas_width - width) / 2)
-        self.__y_offset = max(self.y_offset_cells * self.__cell_size, (canvas_height - height) / 2)
+        self.__x_offset = max(self.__x_offset_cells * self.__cell_size, (canvas_width - width) / 2)
+        self.__y_offset = max(self.__y_offset_cells * self.__cell_size, (canvas_height - height) / 2)
         x_max = self.__x_offset + width
         y_max = self.__y_offset + height
 

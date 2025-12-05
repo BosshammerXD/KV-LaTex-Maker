@@ -1,7 +1,7 @@
 from __future__ import annotations
 from collections.abc import Callable
 from DataStructures.KVVarIDs import KVVarIDs, LineTextPair
-from GeneralDataTypes.IDiedString import IDiedString
+from DataStructures.IDiedString import IDiedString
 from Globals.STATIC import FONTS
 from tkinter import Canvas
 

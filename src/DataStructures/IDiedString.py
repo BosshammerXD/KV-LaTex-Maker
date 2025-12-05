@@ -1,10 +1,7 @@
-from GeneralDataTypes.IDiedVal import IDiedVal
+from .IDiedVal import IDiedVal
 
 
 class IDiedString(IDiedVal[str]):
-    def __repr__(self) -> str:
-        return f"Var(val={self.val}, id={self.id})"
-    
     def __str__(self) -> str:
         return self.val
     

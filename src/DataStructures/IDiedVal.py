@@ -16,5 +16,8 @@ class IDiedVal(Generic[_T]):
     def id(self) -> int:
         return self.__id
     
+    def __repr__(self) -> str:
+        return f"Var(val={self.val}, id={self.id})"
+
     def __del__(self) -> None:
         IDiedVal.__ID_GENERATOR.release_id(self.__id)
