@@ -21,6 +21,10 @@ class KVColorsMenu(OptionMenu):
     def set_color_from_marking(self, marking: Marking) -> None:
         self.__current_color.set(marking.latex_color)
     
+    def set_color_no_trace(self, new_color: str) -> None:
+        self.__got_next_color = True
+        self.__current_color.set(new_color)
+
     def next_color(self) -> str:
         self.__got_next_color = True
         new_color = self.__colors.get_item()

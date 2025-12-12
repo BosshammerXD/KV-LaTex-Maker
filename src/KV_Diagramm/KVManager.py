@@ -10,7 +10,20 @@ from .KVToLaTeX import get_kv_string
 from .Dataclasses.KVData import KVData
 from .Dataclasses.Marking import Marking, MarkingData
 
+from Globals.STATIC import MAIN_UNDO_MANAGER
+from UndoManager import ActionTypes
+
 from Shapes.KVMarkings import KVMarkings
+
+from collections.abc import Callable
+from typing import TypeVar, Any
+
+_RET_T = TypeVar("_RET_T")
+
+def lazy(func:Callable[..., _RET_T]) -> Callable[..., Callable[[], _RET_T]]:
+    def my_inner(*args: list[Any], **kwds: dict[str, Any]) -> Callable[[], _RET_T]:
+        return lambda: func(*args, **kwds)
+    return my_inner
 
 class KVManager:
     __MARKING_PREFIX: str = "marking_"
@@ -28,24 +41,49 @@ class KVManager:
     #region Button Funcs
     def new_marking(self) -> None:
         if len(self.__kv_data.get_selected_marking().indices) == 0:
-            return #why would someone need a new marking if the current one is empty
+            return #why would someone need a new marking if the current one is 
         new_col = self.__color_menu.next_color()
         
         self.__kv_data.add_marking(new_col, self.__marking_id_generator.generate_id(), self.__kv_data.selected + 1)
         self.__kv_data.selected += 1
+        current_marking = self.__kv_data.get_selected_marking()
+        current_index = self.__kv_data.selected    
+        def action(typ: ActionTypes) -> None:
+            match typ:
+                case ActionTypes.DO_ACTION:
+                    self.__restore_marking(current_marking, current_index)
+                    self.__kv_data.selected = current_index
+                case ActionTypes.UNDO_ACTION:
+                    self.__forget_marking(current_marking, current_index)
+                    self.__kv_data.selected = current_index - 1
+                case ActionTypes.CLEARED_FROM_REDO:
+                    self.__marking_id_generator.release_id(current_marking.TAG)
+                case _: pass
+        MAIN_UNDO_MANAGER.add_action(action,execute_do=False)
 
     def different_marking(self, offset: int) -> None:
         current_marking = self.__kv_data.get_selected_marking()
-        current_indices = current_marking.indices
-        if len(current_indices) == 0 and self.__kv_data.len_markings > 1:
-            self.__clear_marking(current_marking)
-            self.__kv_data.remove_marking(self.__kv_data.selected)
-            self.__color_menu.release_marking_color(current_marking)
-            self.__marking_id_generator.release_id(current_marking.TAG)
+        delete_old: bool = len(current_marking.indices) == 0 and self.__kv_data.len_markings > 1
+        current_index = self.__kv_data.selected
+        if delete_old:
+            def action(typ: ActionTypes) -> None:
+                match typ:
+                    case ActionTypes.DO_ACTION:
+                        self.__forget_marking(current_marking, current_index)
+                    case ActionTypes.UNDO_ACTION:
+                        self.__restore_marking(current_marking, current_index)
+                    case ActionTypes.PUSHED_OUT_OF_QUEUE:
+                        self.__marking_id_generator.release_id(current_marking.TAG)
+                    case _: pass
         else:
-            self.__kv_data.selected += offset
-
-        self.__color_menu.set_color_from_marking(self.__kv_data.get_selected_marking())
+            def action(typ: ActionTypes) -> None:
+                match typ:
+                    case ActionTypes.DO_ACTION:
+                        self.__kv_data.selected += offset
+                    case ActionTypes.UNDO_ACTION:
+                        self.__kv_data.selected -= offset
+                    case _: return
+        MAIN_UNDO_MANAGER.add_action(action, execute_do=True)
     #endregion
     #
     #
@@ -55,27 +93,21 @@ class KVManager:
         self.__kv_drawer.schedule_resize(self.__kv_data)
 
     def on_left_click(self, event: Event) -> None:
-        if (index := self.__event_to_kv_index(event)) == -1:
+        if (index := self.__event_to_kv_index(event.x, event.y)) == -1:
             return
-        current_indices = self.__kv_data.get_selected_marking().indices
-        if len(current_indices) == 0:
-            current_indices.append(index)
-        elif (different_bit := KVUtils.get_different_bit(index, current_indices)) is not None:    
-            KVUtils.expand_block(current_indices, different_bit)
-        else:
-            return
-        self.__update_selected_marking()
+        current_marking = self.__kv_data.get_selected_marking()
+        if KVUtils.get_different_bit(index, current_marking.indices) is not None or len(current_marking.indices) == 0:
+            action =MAIN_UNDO_MANAGER.make_action(self.__expand_marking(current_marking, index), self.__shrink_marking(current_marking, index))
+            MAIN_UNDO_MANAGER.add_action(action, execute_do=True)
     
     def on_right_click(self, event: Event) -> None:
         current_marking = self.__kv_data.get_selected_marking()
-        current_indices = current_marking.indices
-        if len(current_indices) == 0:
+        if len(current_marking.indices) == 0:
             return
-        elif len(current_indices) == 1:
-            self.__clear_marking(current_marking)
-        elif (index := self.__event_to_kv_index(event)) in current_indices:
-            KVUtils.shrink_block(current_indices, index)
-            self.__update_selected_marking()
+        index = self.__event_to_kv_index(event.x, event.y)
+        if index in current_marking.indices:
+            action = MAIN_UNDO_MANAGER.make_action(self.__shrink_marking(current_marking, index), self.__expand_marking(current_marking, index))
+            MAIN_UNDO_MANAGER.add_action(action, execute_do=True)
     
     def on_colors_changed(self, event: Event) -> None:
         self.__kv_data.update_colors()
@@ -90,23 +122,24 @@ class KVManager:
     #
     #region linker methods 
     def link_vals(self, vals: StringVar) -> None:
-        def vals_changed() -> None:
-            new_values = vals.get()
+        @self.__traced_action(vals, self.__kv_data.vals)
+        def vals_changed(new_values: str) -> None:
             self.__kv_data.vals = new_values
             self.__kv_drawer.update(self.__kv_data, new_values=new_values)
         vals.trace_add('write', lambda name, index, mode: vals_changed())
         vals_changed()
     
     def link_vars(self, vars: StringVar) -> None:
-        def vars_changed() -> None:
-            new_vars = vars.get().split(",")
+        @self.__traced_action(vars, ",".join(self.__kv_data.vars))
+        def vars_changed(new_vars: str) -> None:
+            new_vars_ls = new_vars.split(",")
             if len(self.__kv_data.vars) != len(new_vars):    
                 grid_mode: GridUpdateMode = GridUpdateMode.UPDATE
             else:
                 grid_mode: GridUpdateMode = GridUpdateMode.NONE
-            self.__kv_data.vars = new_vars
+            self.__kv_data.vars = new_vars_ls
             self.__update_kv_width()
-            self.__kv_drawer.update(self.__kv_data, new_vars=new_vars, draw_grid=grid_mode)
+            self.__kv_drawer.update(self.__kv_data, new_vars=new_vars_ls, draw_grid=grid_mode)
         vars.trace_add('write', lambda name, index, mode: vars_changed())
         vars_changed()
     
@@ -119,15 +152,51 @@ class KVManager:
     def __color_changed(self, new_color: str):
         if self.__kv_data.len_markings:
             marking = self.__kv_data.get_selected_marking()
-            marking.latex_color = new_color
-            self.__kv_drawer.set_marking_color(marking.TAG, marking.tkinter_color)
+            old_color = marking.latex_color
+            def action(typ: ActionTypes) -> None:
+                match typ:
+                    case ActionTypes.DO_ACTION:
+                        marking.latex_color = new_color
+                        self.__color_menu.set_color_no_trace(new_color)
+                    case ActionTypes.UNDO_ACTION:
+                        marking.latex_color = old_color
+                        self.__color_menu.set_color_no_trace(old_color)
+                    case _: return
+                self.__kv_drawer.set_marking_color(marking.TAG, marking.tkinter_color)
+            MAIN_UNDO_MANAGER.add_action(action, execute_do=True)
     #endregion
     #
     #
     #
     #region Internal Utils
-    def __event_to_kv_index(self, event: Event):
-        x,y = self.__kv_drawer.canvas_to_grid_coord(event.x, event.y)
+    def __traced_action(self, var: StringVar, old_val: str) -> Callable[[Callable[[str], None]], Callable[[], None]]:
+        no_action: bool = False
+        def decorator(f: Callable[[str], None]) -> Callable[[], None]:
+            def action_register() -> None:
+                nonlocal no_action
+                new_val = var.get()
+                f(new_val)
+                def action(typ: ActionTypes) -> None:
+                    nonlocal no_action
+                    match typ:
+                        case ActionTypes.DO_ACTION:
+                            no_action = True
+                            var.set(old_val)
+                        case ActionTypes.UNDO_ACTION:
+                            no_action = True
+                            var.set(new_val)
+                        case _: return
+                if not no_action:
+                    MAIN_UNDO_MANAGER.add_action(action, execute_do=False)
+                else:
+                    no_action = False
+            return action_register
+        return decorator
+
+
+
+    def __event_to_kv_index(self, event_x: int, event_y: int):
+        x,y = self.__kv_drawer.canvas_to_grid_coord(event_x, event_y)
         if x < 0 or x >= self.__kv_data.width or y < 0 or y >= self.__kv_data.height:
             return -1
         return KVUtils.CoordinateToIndex(x,y)
@@ -139,12 +208,35 @@ class KVManager:
         self.__kv_data.width = 2**num_top_vars
         self.__kv_data.height = 2**num_left_vars
     
-    def __clear_marking(self, marking: Marking):
-        marking.indices.clear()
+    def __restore_marking(self, marking: Marking, marking_index: int) -> None:
+        self.__kv_data.restore_marking(marking, marking_index)
+
+    def __forget_marking(self, marking: Marking, marking_index: int) -> None:
+        self.__clear_marking(marking)
+        self.__kv_data.remove_marking(marking_index)
+        self.__color_menu.release_marking_color(marking)
+
+    @lazy
+    def __shrink_marking(self, marking: Marking, excluded_index: int):
+        if len(marking.indices) == 1:
+            self.__clear_marking(marking)
+        elif excluded_index in marking.indices:
+            KVUtils.shrink_block(marking.indices, excluded_index)
+            self.__update_marking(marking)
+
+    @lazy
+    def __expand_marking(self, marking: Marking, added_index: int):
+        if len(marking.indices) == 0:
+            marking.indices.append(added_index)
+        elif (diff_bit := KVUtils.get_different_bit(added_index, marking.indices)) is not None:
+            KVUtils.expand_block(marking.indices, diff_bit)
+        self.__update_marking(marking)
+
+    def __clear_marking(self, marking: Marking) -> None:
+        marking.indices = []
         self.__kv_drawer.delete_marking(marking.TAG)
     
-    def __update_selected_marking(self):
-        marking = self.__kv_data.get_selected_marking()
+    def __update_marking(self, marking: Marking) -> None:
         marking.drawables = MarkingData.from_indices(marking.indices, self.__kv_data.width, self.__kv_data.height)
         self.__kv_drawer.update(self.__kv_data, changed_markings=[marking])
     #endregion

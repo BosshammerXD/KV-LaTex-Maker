@@ -28,6 +28,11 @@ def get_different_bit(index: int, others: list[int]) -> Optional[int]:
     assert(ret.bit_count() == 1)
     return ret.bit_length() - 1
 
+def get_different_bit_forced(index: int, others: list[int]) -> int:
+    ret: int = index ^ next(find_kv_neigbours(index, others))
+    assert(ret.bit_count() == 1)
+    return ret.bit_length() - 1
+
 def make_blocks(indices: list[int]) -> list[list[tuple[int, int]]]:
     #modified Flood Fill Algorithm
     coords: set[tuple[int, int]] = {IndexToCoordinate(i) for i in indices}

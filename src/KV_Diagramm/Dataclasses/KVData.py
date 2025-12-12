@@ -38,6 +38,11 @@ class KVData:
         else:
             self._markings.insert(index, marking)
             self._kv_markings.new_marking(marking)
+    
+    def restore_marking(self, marking: Marking, index: int):
+        self._markings.insert(index, marking)
+        self._kv_markings.new_marking(marking)
+        self.__adjust_selected()
 
     def remove_marking(self, index: int):
         marking = self._markings.pop(index)
