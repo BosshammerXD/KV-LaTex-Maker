@@ -97,7 +97,7 @@ class KVManager:
             return
         current_marking = self.__kv_data.get_selected_marking()
         if KVUtils.get_different_bit(index, current_marking.indices) is not None or len(current_marking.indices) == 0:
-            action =MAIN_UNDO_MANAGER.make_action(self.__expand_marking(current_marking, index), self.__shrink_marking(current_marking, index))
+            action = MAIN_UNDO_MANAGER.make_action(self.__expand_marking(current_marking, index), self.__shrink_marking(current_marking, index))
             MAIN_UNDO_MANAGER.add_action(action, execute_do=True)
     
     def on_right_click(self, event: Event) -> None:
@@ -181,10 +181,10 @@ class KVManager:
                     match typ:
                         case ActionTypes.DO_ACTION:
                             no_action = True
-                            var.set(old_val)
+                            var.set(new_val)
                         case ActionTypes.UNDO_ACTION:
                             no_action = True
-                            var.set(new_val)
+                            var.set(old_val)
                         case _: return
                 if not no_action:
                     MAIN_UNDO_MANAGER.add_action(action, execute_do=False)

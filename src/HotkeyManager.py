@@ -1,51 +1,95 @@
+from __future__ import annotations
 from collections.abc import Callable
-from tkinter import Tk, Event, StringVar
+from tkinter import Event, Tk
+from enum import StrEnum, IntFlag
+
+class ControlStates(IntFlag):
+    NONE = 0x0000
+    SHFT = 0x0001
+    LOCK = 0x0002
+    CTRL = 0x0004
+    MOD1 = 0x0008
+    MOD2 = 0x0010
+    MOD3 = 0x0040
+    MOD4 = 0x0080
+    ALL  = 0x00DF
+
+    @staticmethod
+    def from_int(num: int) -> ControlStates:
+        return ControlStates.ALL & num
+
+class Hotkey(tuple[ControlStates, str]):
+    def __new__(cls, state: int | ControlStates, keysym: str):
+        if not isinstance(state, ControlStates):
+            state = ControlStates.from_int(state)
+        return super().__new__(cls, (state, keysym))
+        
+    
+    @staticmethod
+    def from_event(event: Event) -> Hotkey:
+        assert(isinstance(event.state, int))
+        return Hotkey(event.state, event.keysym)
+
+class HotkeyActions(StrEnum):
+    UNDO = "UNDO"
+    REDO = "REDO"
 
 class HotkeyManager:
-    def __init__(self, master: Tk):
-        self.master: Tk = master
-        self.override_hotkey: str = ""
-        self.hotkeys: dict[str, tuple[Callable[[], None], StringVar]] = {}
-        self.stringvar_map: dict[str, str] = {}
-
-        self.master.bind("<KeyPress>", self._on_hotkey) # type: ignore[override]
+    __selected: HotkeyManager | None = None
+    listening_for_hotkey: Hotkey | None = None
+    __last_state: ControlStates = ControlStates.NONE
+    __hotkey_2_action: dict[Hotkey, HotkeyActions] = {}
+    def __init__(self, root: Tk) -> None:
+        self.__registered_funcs: dict[HotkeyActions, Callable[[Event, bool], None]] = {}
+        root.bind("<KeyPressed>", self.__on_key_press)
     
-    def bind_hotkey(self, hotkey: StringVar, func: Callable[[], None]):
-        self.stringvar_map[str(hotkey)] = hotkey.get()
-        self.hotkeys[hotkey.get()] = func, hotkey
+    def register(self, action: HotkeyActions, func: Callable[[Event, bool], None]) -> None:
+        if self.__registered_funcs.get(action) is not None:
+            raise ValueError(f"{action} is already bound")
+        self.__registered_funcs[action] = func
 
-        hotkey.trace_add("write", lambda x,y,z: self.hotkey_changed(str(hotkey), hotkey.get()))
-    
-    def unbind_hotkey(self, hotkey: StringVar) -> None:
-        self.stringvar_map.pop(str(hotkey), None)
-        self.hotkeys.pop(hotkey.get(), None)
-    
-    def _on_hotkey(self, event: Event) -> None: #type: ignore[override]
-        self.hotkeys.get(event.keysym, (lambda : None, StringVar()))[0]()
+    def __on_key_press(self, event: Event) -> None:
+        func = self.__get_func_from_event(event)
+        if func is not None:
+            func(event, True)
 
-        
-    
-    def hotkey_changed(self, my_id: str, val:str) -> None:
-        old_input = self.stringvar_map[my_id]
-        self.stringvar_map[my_id] = val
-        
-        
-        func_in_map = self.hotkeys.get(val)
+    @classmethod
+    def init_hotkey_to_action(cls, values: dict[tuple[int, str], str]) -> None:
+        assert(len(cls.__hotkey_2_action) == 0)
+        added_actions: set[HotkeyActions] = set()
+        for (ev, keysym), action_str in values.items():
+            try:
+                action = HotkeyActions[action_str]
+                if action in added_actions:
+                    raise ValueError(f"{action_str} has two hotkeys")
+                added_actions.add(action)
+                cls.__hotkey_2_action[Hotkey(ev, keysym)] = action
+            except KeyError:
+                raise ValueError(f"{action_str} is not a valid action")
 
-        if func_in_map is None:
-            holder = self.hotkeys.pop(old_input, (lambda : None, StringVar()))
-            self.hotkeys[val] = holder
+    @classmethod
+    def change_hotkey(cls, old_hotkey: Hotkey, new_hotkey: Hotkey) -> None:
+        action: HotkeyActions = cls.__hotkey_2_action.pop(old_hotkey)
+        cls.__hotkey_2_action[new_hotkey] = action
+
+    @classmethod
+    def on_key_press(cls, event: Event) -> None:
+        if cls.__selected is not None:
+            cls.__selected.__on_key_press(event)
+        elif cls.listening_for_hotkey is not None:
+            cls.__change_hotkey_ev(event, cls.listening_for_hotkey)
+
+    @classmethod
+    def __change_hotkey_ev(cls, event: Event, old_hotkey: Hotkey) -> None:
+        assert(isinstance(event.state, int))
+        if (cls.__last_state ^ event.state).bit_count() == 1:
+            cls.__last_state = ControlStates.from_int(event.state)
         else:
-            old_func, old_hotkey = func_in_map
-
-            holder = self.hotkeys.pop(old_input, (lambda : None, StringVar()))
-            self.hotkeys[val] = holder
-
-            self.hotkeys[old_input] = old_func, old_hotkey
-
-            self.stringvar_map[str(old_hotkey)] = old_input
-        
-        
-        
-
+            cls.__last_state = ControlStates.NONE
+            cls.change_hotkey(old_hotkey, Hotkey.from_event(event))
     
+    def __get_func_from_event(self, event: Event) -> Callable[[Event, bool], None] | None:
+        action = self.__hotkey_2_action.get(Hotkey.from_event(event))
+        if action is None:
+            return None
+        return self.__registered_funcs.get(action)
